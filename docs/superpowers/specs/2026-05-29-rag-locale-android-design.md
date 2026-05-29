@@ -16,6 +16,7 @@ Il messaggio in una frase: *"il RAG non è magia cloud — ecco ogni pezzo che g
 - RAG **dense-only** ("old classic"): chunking → embedding → cosine top-K → risposta grounded.
 - Tutto **locale**: embedder, vector store e LLM sul device.
 - Ingestion da **tre sorgenti**: file testo/markdown, PDF, URL.
+- **Selettore/download modello in-app** (default Gemma 4 E2B), stile AI Edge Gallery.
 - UI didattica: per ogni domanda mostra i chunk recuperati con i loro **score di similarità** e quali hanno alimentato la risposta.
 - Risposte con **citazione** dei chunk usati.
 
@@ -33,12 +34,16 @@ Il messaggio in una frase: *"il RAG non è magia cloud — ecco ogni pezzo che g
 
 ## Modelli (tutti locali)
 
+> Aggiornato a maggio 2026 dopo ricerca. Il sample dell'SDK usa ancora Gemma-3 1B + Gecko: scelte datate. Target attuale → Gemma 4 E2B + EmbeddingGemma.
+
 | Ruolo | Modello | Note |
 |---|---|---|
-| Embedder | **Gecko** quantizzato, variante 256 token | 768 dim |
-| LLM | **Gemma-3 1B**, int4, via LLM Inference API | unico modello generativo |
+| LLM | **Gemma 4 E2B** (variante "edge"/phone), 4-bit (2-bit opzionale), via MediaPipe LLM Inference su **LiteRT-LM** | ~1.3GB su disco, **2-3GB RAM a runtime** (<1.5GB col 2-bit su alcuni device). Context **128K**, 140+ lingue. Multimodale, ma usiamo **solo testo**. |
+| Embedder | **EmbeddingGemma** (308M, on-device, basato su Gemma 3) — raccomandato per RAG mobile. **Fallback: Gecko** quantizzato (default dell'SDK, 768 dim) | EmbeddingGemma è l'embedder moderno; Gecko resta la rete di sicurezza out-of-box |
 
-Fondazione: **AI Edge RAG SDK** (`com.google.ai.edge.localagents:localagents-rag`) per embedder, vector store e LLM. Per il dense-only usiamo l'SDK *out-of-the-box* (`RetrievalAndInferenceChain` o composizione diretta dei componenti) — è lo scenario nativo dell'SDK, percorso a minor rischio.
+- **Selettore modello in-app** (come la AI Edge Gallery): l'utente scarica/sceglie il modello dall'app. Default **E2B** (sta negli 8GB del Poco); **E4B** (~4-5GB RAM) opzionale solo per device più capienti.
+- **Fondazione:** AI Edge RAG SDK (`com.google.ai.edge.localagents:localagents-rag`) per embedder, vector store e generazione. Per il dense-only usiamo l'SDK *out-of-the-box* (`RetrievalAndInferenceChain` o composizione diretta dei componenti) — scenario nativo dell'SDK, minor rischio.
+- ⚠️ **Supporto Gemma 4 nell'SDK da verificare in build**: l'LLM Inference API carica LiteRT-LM (quindi atteso ok), ma le docs RAG citano per nome solo Gemma 3/3n. **Fallback sicuro: Gemma 3n**, esplicitamente supportato.
 
 ## Architettura
 
@@ -67,6 +72,7 @@ RetrievedChunk[] → PromptBuilder → Gemma → Answer{text, citations}
 4. **Vector store** — `SqliteVectorStore` (persistente); ricerca cosine top-K.
 5. **Generator** — `PromptBuilder` (chunk + domanda → prompt grounded) + chiamata Gemma; estrae le citazioni.
 6. **UI didattica** — schermata di ingestion (scegli file/PDF/incolla link) + chat; pannello che espone chunk recuperati, score e chunk citati.
+7. **Model manager** — download e selezione del modello in-app (E2B default, E4B opzionale); check spazio storage e stato del modello.
 
 ## Il perno didattico: il "test della parafrasi"
 
@@ -83,10 +89,11 @@ Fai una domanda con parole **che non compaiono** nel documento, e la ricerca sem
 
 ## Rischi
 
-1. **[ALTO — spike per primo] GPU delegate di MediaPipe su GPU Mali/MediaTek.** Collaudato bene su Adreno/Tensor, incerto su Mali. *Primo task in assoluto: far partire Gemma-3 1B via LiteRT sul Poco e capire se gira su GPU o cade in CPU* — determina la latenza attesa.
-2. **Context window di Gemma-3 1B piccola** → il budget `topK × chunkSize` va calibrato perché il prompt aumentato ci stia.
-3. **Qualità risposte di un modello 1B** → gestire le aspettative; grounding + citazioni mitigano le allucinazioni.
+1. **[ALTO — spike per primo] Accelerazione su GPU Mali/MediaTek.** L'LLM Inference API auto-seleziona GPU/NPU/CPU, ma è collaudata bene su Adreno/Tensor e incerta su Mali. *Primo task in assoluto: far partire Gemma 4 E2B via LiteRT sul Poco e capire se gira accelerata o cade in CPU* — determina la latenza reale.
+2. **Memoria, non context window.** Gemma 4 E2B ha 128K di context (ampio): il vincolo non è più la finestra del prompt ma la **RAM** (~2-3GB a runtime sugli 8GB del Poco). Tenere comunque `topK` ragionevole per latenza/batteria.
+3. **Qualità risposte di un modello edge piccolo** → gestire le aspettative; grounding + citazioni mitigano le allucinazioni.
 4. **Variabilità estrazione testo da URL** (boilerplate, pagine dinamiche).
+5. **Supporto ufficiale Gemma 4 nell'AI Edge RAG SDK non confermato** (docs citano Gemma 3/3n). Mitigazione: fallback a **Gemma 3n**, supportato esplicitamente.
 
 ## Testing
 
@@ -99,3 +106,5 @@ Fai una domanda con parole **che non compaiono** nel documento, e la ricerca sem
 - LLM-as-reranker abbandonato insieme al rerank (non serve nel dense-only).
 - Documento singolo ma **lungo** (abbastanza chunk perché il retrieval conti); 3 sorgenti di ingestion (testo, PDF, URL).
 - Android nativo Kotlin + AI Edge RAG SDK.
+- **Modelli aggiornati (ricerca maggio 2026): Gemma 4 E2B (LLM) + EmbeddingGemma (embedder)**, al posto del datato Gemma-3 1B + Gecko del sample. Fallback: Gemma 3n / Gecko.
+- **Selettore modello in-app** (stile AI Edge Gallery), default E2B.
