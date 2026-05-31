@@ -1,0 +1,28 @@
+# Hook pre-commit baseline (Kotlin/Android + igiene segreti).
+# Installa con:  pip install pre-commit && pre-commit install
+# Esegui su tutto: pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]   # blocca artefatti pesanti (modelli, APK)
+
+  # Lint/format Kotlin
+  - repo: https://github.com/JLLeitschuh/ktlint-gradle
+    rev: v12.1.1
+    hooks:
+      - id: ktlint
+    # In alternativa, se preferisci il binario ktlint standalone:
+    # - repo: https://github.com/pinterest/ktlint  (vedi README per l'hook)
+
+  # Rilevamento segreti committati per errore
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: ".*\\.lock$|package-lock\\.json$"

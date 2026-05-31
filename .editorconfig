@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+max_line_length = 140
+# Gli import con wildcard sono richiesti dall'API LiteRT-LM (com.google.ai.edge.litertlm.*).
+ktlint_standard_no-wildcard-imports = disabled
+# La convenzione sui nomi file con più dichiarazioni top-level non ci interessa qui.
+ktlint_standard_filename = disabled
+# Le funzioni @Composable usano la convenzione PascalCase: non trattarle come violazioni.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Regole di wrapping firma/annotazioni: confliggono con lo stile idiomatico dei
+# costruttori Hilt (@Inject constructor) e dei @Composable, e innescano una cascata
+# sull'indentazione che ktlintFormat non converge. Le disattiviamo (demo didattica).
+ktlint_standard_annotation = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_class-signature = disabled
+
+[*.{yml,yaml,json}]
+indent_size = 2

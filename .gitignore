@@ -1,0 +1,46 @@
+# --- Segreti / credenziali (non committare mai) ---
+.env
+.env.*
+!.env.example
+*.pem
+id_rsa
+id_rsa.*
+*credentials*
+*.key
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+
+# --- Android / Gradle ---
+local.properties
+.gradle/
+build/
+*/build/
+captures/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+output.json
+
+# --- Modelli scaricati on-device (artefatti pesanti, non versionare) ---
+*.task
+*.tflite
+*.litertlm
+*.bin
+
+# --- IDE / Android Studio ---
+.idea/
+*.iml
+.kotlin/
+local.properties
+
+# --- Claude Code (impostazioni personali, non condivise) ---
+.claude/settings.local.json
+
+# --- macOS / OS ---
+.DS_Store
