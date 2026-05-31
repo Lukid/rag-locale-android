@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glifo semplice: un "documento" stilizzato a richiamare il RAG locale. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,30 h22 l10,10 v38 h-32 z" />
+    <path
+        android:fillColor="#0B5394"
+        android:pathData="M44,50 h20 v3 h-20 z M44,57 h20 v3 h-20 z M44,64 h13 v3 h-13 z" />
+</vector>

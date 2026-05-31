@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- L'UI è interamente in Jetpack Compose; questo tema serve solo come base
+         della finestra (niente ActionBar). I colori reali li gestisce RagLocaleTheme. -->
+    <style name="Theme.RagLocale" parent="Theme.Material3.DayNight.NoActionBar" />
+</resources>
