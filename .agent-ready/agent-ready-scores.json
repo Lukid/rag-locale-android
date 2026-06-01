@@ -1,117 +1,101 @@
 {
   "schema_version": 2,
   "project": "rag-locale-android",
-  "timestamp": "2026-05-29",
-  "mode": "greenfield",
+  "timestamp": "2026-05-31T16:01:51Z",
+  "mode": "brownfield",
   "declared_agents": ["claude"],
-  "overall_score": 43,
-  "level": "Partially Ready",
+  "overall_score": 63,
+  "level": "Ready",
   "layers": {
-    "portable": { "score": 40.8, "max": 94.3 },
-    "target_specific": { "score": 2.7, "max": 5.7, "agents": ["claude"] }
+    "portable": { "score": 58.7, "max": 94.3 },
+    "target_specific": { "score": 4.35, "max": 5.7, "agents": ["claude"] }
   },
   "dimensions": {
     "agent_instructions_context": {
-      "weight": 18,
-      "raw_score": 86.25,
-      "weighted_score": 15.5,
+      "weight": 18, "raw_score": 86.25, "weighted_score": 15.5,
       "subcriteria": {
-        "primary_instruction_file": { "score": 100, "weight": 25, "layer": "portable", "na": false, "evidence": "AGENTS.md present (canonical) + CLAUDE.md symlink bridge.", "note": "Canonical instruction file in place." },
-        "instruction_quality": { "score": 75, "weight": 25, "layer": "portable", "na": false, "evidence": "Project-specific: components, device target, models, structure, security section. build/test/lint are templated Gradle placeholders (TODO until project scaffolded).", "why": "Value comes from project-specific facts (exact commands, paths, conventions), not boilerplate.", "consequence": "Placeholder commands force trial-and-error until real Gradle commands are verified.", "fixable_by": "partial", "fix_ref": "Update commands once ./gradlew exists; add domain gotchas.", "effort": "Med" },
-        "instruction_conciseness": { "score": 100, "weight": 20, "layer": "portable", "na": false, "evidence": "instruction_audit: 79 lines, ~1041 tokens, no boilerplate, under 300-line limit.", "note": "Focused and concise." },
-        "hierarchical_instructions": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "Single root AGENTS.md; no subpackages exist yet (no source).", "why": "Scoped per-package instruction files give locally-relevant context in large repos.", "consequence": "Not relevant until the app grows multiple modules.", "fixable_by": "skill", "fix_ref": "/agent-ready fix agent_instructions_context once modules exist.", "effort": "Med" },
-        "cross_agent_bridge": { "score": 100, "weight": 15, "layer": "target", "na": false, "evidence": "CLAUDE.md is a symlink to AGENTS.md (single source of truth, no contradictory copy).", "note": "Bridge correctly established for claude." }
+        "primary_instruction_file": { "score": 100, "weight": 25, "layer": "portable", "na": false, "evidence": "AGENTS.md presente, project-specific (panoramica, comandi reali, struttura, stile, sicurezza).", "fixable_by": "skill", "effort": "Low" },
+        "instruction_quality": { "score": 75, "weight": 25, "layer": "portable", "na": false, "evidence": "Comandi build/test/lint reali + policy sicurezza; ma la sezione Struttura elenca ancora componenti RAG futuri e 'app/ da creare' (leggermente stale rispetto ai package reali).", "why": "Il valore viene da fatti project-specific, non da boilerplate.", "consequence": "Sezioni stale possono sviare l'agente sulla struttura attuale.", "fixable_by": "partial", "fix_ref": "/agent-ready fix agent_instructions_context", "effort": "Med" },
+        "instruction_conciseness": { "score": 100, "weight": 20, "layer": "portable", "na": false, "evidence": "instruction_audit: 83 righe, ~1120 token, 0 frasi boilerplate, sotto il limite.", "fixable_by": "partial", "effort": "Low" },
+        "hierarchical_instructions": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "Singolo modulo app/, nessun AGENTS.md per-package (adeguato alla dimensione attuale).", "why": "In repo grandi i file scoped danno contesto locale ad alto segnale.", "consequence": "Per ora trascurabile (modulo unico); rilevante se nascono moduli.", "fixable_by": "skill", "fix_ref": "/agent-ready fix agent_instructions_context", "effort": "Med" },
+        "cross_agent_bridge": { "score": 100, "weight": 15, "layer": "target", "na": false, "evidence": "CLAUDE.md è un symlink ad AGENTS.md (instruction_audit: similarity 1.0, nessuna contraddizione).", "fixable_by": "skill", "effort": "Low" }
       }
     },
     "navigability_code_intelligence": {
-      "weight": 18,
-      "raw_score": 48.25,
-      "weighted_score": 8.7,
+      "weight": 18, "raw_score": 70.75, "weighted_score": 12.7,
       "subcriteria": {
-        "repo_map_availability": { "score": 25, "weight": 20, "layer": "portable", "na": false, "evidence": "repo_map.py: 0 files analyzed (no source yet); no committed map.", "why": "Repo maps cut navigation tokens ~70%.", "consequence": "Nothing to map until code exists.", "fixable_by": "partial", "fix_ref": "Generate repo_map once Kotlin sources exist.", "effort": "Low" },
-        "semantic_nav_amenability": { "score": 50, "weight": 18, "layer": "portable", "na": false, "evidence": "Target stack is Kotlin (statically typed, LSP-friendly), but no code/build config yet.", "why": "LSP semantic nav (Serena) needs typed, analyzable code.", "consequence": "Amenability realized once Kotlin sources land.", "fixable_by": "manual", "fix_ref": "Keep code typed; ensure a Kotlin language server is available.", "effort": "High" },
-        "dependency_structure_clarity": { "score": 25, "weight": 17, "layer": "portable", "na": false, "evidence": "Clear component boundaries described in the design spec, but no build.gradle / derivable dependency graph yet.", "why": "Derivable dependency graph lets agents reason about blast radius.", "consequence": "No machine-readable structure until Gradle modules exist.", "fixable_by": "manual", "fix_ref": "Define Gradle modules with explicit dependencies.", "effort": "High" },
-        "readme_overview": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "Overview present in AGENTS.md + design spec; no dedicated README.md; setup is TODO.", "why": "A root README orients agents and humans before deep work.", "consequence": "Newcomers land without a conventional entry point.", "fixable_by": "partial", "fix_ref": "/agent-ready fix navigability_code_intelligence scaffolds a README skeleton.", "effort": "Low" },
-        "machine_readable_contracts": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "On-device app with no external API boundary; OpenAPI/proto/GraphQL not applicable.", "why": "Contracts give unambiguous boundary specs when services exist.", "consequence": "Not applicable for an offline, single-app project.", "fixable_by": "manual", "fix_ref": "Add schemas only if a service boundary emerges.", "effort": "High" },
-        "file_size_sanity": { "score": 100, "weight": 15, "layer": "portable", "na": false, "evidence": "file_metrics: 0 oversized files (>500 LOC).", "note": "Clean." }
+        "repo_map_availability": { "score": 50, "weight": 20, "layer": "portable", "na": false, "evidence": "Nessuna mappa committata; repo_map.py non indicizza Kotlin (0 file). Struttura comunque piccola e chiara.", "why": "Le repo-map riducono ~70% i token di navigazione.", "consequence": "L'agente ripiega su read/grep ampi.", "fixable_by": "partial", "fix_ref": "/agent-ready fix navigability_code_intelligence", "effort": "Low" },
+        "semantic_nav_amenability": { "score": 100, "weight": 18, "layer": "portable", "na": false, "evidence": "Kotlin tipizzato e analizzabile; language server disponibile.", "fixable_by": "manual", "effort": "High" },
+        "dependency_structure_clarity": { "score": 75, "weight": 17, "layer": "portable", "na": false, "evidence": "Modulo Gradle :app unico con package netti (inference/chat/modelmanager/ui/data); manifest Gradle chiaro.", "why": "Un grafo di dipendenze derivabile permette di stimare il blast radius.", "consequence": "A questa scala il rischio è basso.", "fixable_by": "manual", "effort": "High" },
+        "readme_overview": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "Nessun README.md; l'orientamento (scopo/struttura/comandi) è però fornito da AGENTS.md (sezione Panoramica).", "why": "Un README è il punto d'ingresso convenzionale per umani e agenti.", "consequence": "Chi arriva cerca README.md e potrebbe non trovare subito l'overview.", "fixable_by": "partial", "fix_ref": "/agent-ready fix navigability_code_intelligence", "effort": "Low" },
+        "machine_readable_contracts": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "N/A: app on-device senza confini di servizio (nessun OpenAPI/proto/GraphQL applicabile). Non e' un difetto reale a questo stadio.", "why": "I contratti servono ai confini di servizio.", "consequence": "Nessuna conseguenza: non ci sono boundary HTTP/RPC.", "fixable_by": "manual", "effort": "High" },
+        "file_size_sanity": { "score": 100, "weight": 15, "layer": "portable", "na": false, "evidence": "file_metrics: 0 file oversized; max ben sotto 500 LOC (31 file Kotlin / 1673 LOC).", "fixable_by": "manual", "effort": "Med" }
       }
     },
     "testing_feedback": {
-      "weight": 16,
-      "raw_score": 20,
-      "weighted_score": 3.2,
+      "weight": 16, "raw_score": 71.25, "weighted_score": 11.4,
       "subcriteria": {
-        "test_suite_present": { "score": 0, "weight": 20, "layer": "portable", "na": false, "evidence": "No tests (no source code yet).", "why": "Test feedback is the highest-impact comprehension signal for agents.", "consequence": "No oracle to confirm changes.", "fixable_by": "manual", "fix_ref": "Write unit tests for Chunker, cosine ranking, NormalizedText extraction, PromptBuilder (per spec).", "effort": "High" },
-        "test_commands_documented": { "score": 50, "weight": 20, "layer": "portable", "na": false, "evidence": "AGENTS.md documents ./gradlew test/connectedAndroidTest, marked TODO until wrapper exists; test_commands.py found no runnable command.", "why": "Agents need discoverable commands to self-verify.", "consequence": "Commands not yet executable.", "fixable_by": "skill", "fix_ref": "/agent-ready fix testing_feedback once the runner exists.", "effort": "Low" },
-        "fast_feedback_loop": { "score": 25, "weight": 15, "layer": "portable", "na": false, "evidence": "Unit tests noted as fast/deterministic; no defined quick-subset command.", "why": "A fast subset enables many feedback cycles per task.", "consequence": "Slow loops discourage verification.", "fixable_by": "partial", "fix_ref": "/agent-ready fix testing_feedback documents a quick-subset convention.", "effort": "Med" },
-        "feedback_quality": { "score": 25, "weight": 25, "layer": "portable", "na": false, "evidence": "Kotlin is statically typed (inherent), but no tests or assertion messages exist yet.", "why": "Descriptive assertions + type-checking turn failures into actionable signals.", "consequence": "No feedback infra yet.", "fixable_by": "partial", "fix_ref": "Add descriptive assertions; consider detekt/type-strictness.", "effort": "Med" },
-        "coverage_reasonable": { "score": 0, "weight": 20, "layer": "portable", "na": false, "evidence": "No coverage config, no tests.", "why": "Coverage makes test feedback trustworthy.", "consequence": "Untested behavior gives false confidence.", "fixable_by": "partial", "fix_ref": "/agent-ready fix testing_feedback scaffolds a coverage config (e.g. JaCoCo).", "effort": "Med" }
+        "test_suite_present": { "score": 75, "weight": 20, "layer": "portable", "na": false, "evidence": "24 unit test JVM su 6 suite (logica pura: backend, contesto chat, cap, stato modello, storage). Niente test strumentati.", "why": "I test sono l'oracolo verificabile dell'agente.", "consequence": "Engine/VM/UI restano non coperti finche' non ci sono test strumentati.", "fixable_by": "manual", "effort": "High" },
+        "test_commands_documented": { "score": 100, "weight": 20, "layer": "portable", "na": false, "evidence": "AGENTS.md ha una tabella Comandi con ./gradlew test, assembleDebug, ktlintCheck, lintDebug + nota JAVA_HOME (test_commands.py false-negative: non parsa Gradle/markdown).", "fixable_by": "skill", "effort": "Low" },
+        "fast_feedback_loop": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "Documentato il variant :app:testDebugUnitTest; nessuna convenzione esplicita di subset 'fast'.", "why": "Un subset rapido moltiplica i cicli utili di feedback.", "consequence": "L'agente potrebbe lanciare run piu' lente del necessario.", "fixable_by": "partial", "fix_ref": "/agent-ready fix testing_feedback", "effort": "Med" },
+        "feedback_quality": { "score": 75, "weight": 25, "layer": "portable", "na": false, "evidence": "Test con nomi descrittivi (backtick) e assertEquals/assertTrue con valori; Kotlin = type-check del compilatore. Nessun type-checker extra/strict configurato.", "why": "Messaggi e tipi rendono i fallimenti azionabili.", "consequence": "Fallimenti meno diagnosticabili senza messaggi ricchi.", "fixable_by": "partial", "fix_ref": "/agent-ready fix testing_feedback", "effort": "Med" },
+        "coverage_reasonable": { "score": 50, "weight": 20, "layer": "portable", "na": false, "evidence": "Nessun jacoco/threshold; buona ampiezza sulla logica pura ma non su Engine/VM/UI.", "why": "La coverage rende affidabile il segnale dei test.", "consequence": "Suite verde con comportamento non testato (VM/UI/engine).", "fixable_by": "partial", "fix_ref": "/agent-ready fix testing_feedback", "effort": "Med" }
       }
     },
     "cicd_automation_governance": {
-      "weight": 14,
-      "raw_score": 42.5,
-      "weighted_score": 6.0,
+      "weight": 14, "raw_score": 52.5, "weighted_score": 7.4,
       "subcriteria": {
-        "ci_runs_tests_lint": { "score": 50, "weight": 30, "layer": "portable", "na": false, "evidence": ".github/workflows/ci.yml with JDK 17 + Gradle cache; test/lint steps are TODO placeholders (commented).", "why": "CI is the automated trusted feedback gate.", "consequence": "Gate inert until commands are uncommented.", "fixable_by": "skill", "fix_ref": "Uncomment ./gradlew test/lint once the project builds.", "effort": "Low" },
-        "lint_format_automated": { "score": 50, "weight": 25, "layer": "portable", "na": false, "evidence": "ktlint referenced in pre-commit + CI, but not yet wired into a Gradle build.", "why": "Mechanical style enforcement keeps agent output consistent.", "consequence": "Not runnable until Gradle/ktlint plugin added.", "fixable_by": "skill", "fix_ref": "Add ktlint/detekt Gradle plugin.", "effort": "Low" },
-        "pre_commit_hooks": { "score": 75, "weight": 20, "layer": "portable", "na": false, "evidence": ".pre-commit-config.yaml with trailing-whitespace, large-file guard, ktlint, detect-secrets.", "why": "Hooks shift checks left to commit time.", "consequence": "detect-secrets needs a .secrets.baseline; ktlint hook needs Gradle.", "fixable_by": "skill", "fix_ref": "Run 'detect-secrets scan > .secrets.baseline' and 'pre-commit install'.", "effort": "Low" },
-        "governance": { "score": 0, "weight": 25, "layer": "portable", "na": false, "evidence": "No CODEOWNERS, no Dependabot/Renovate.", "why": "Review routing + dependency automation keep an agent-active repo healthy.", "consequence": "PRs lack reviewers; deps rot.", "fixable_by": "skill", "fix_ref": "/agent-ready fix cicd_automation_governance generates CODEOWNERS + Dependabot (gradle ecosystem).", "effort": "Low" }
+        "ci_runs_tests_lint": { "score": 25, "weight": 30, "layer": "portable", "na": false, "evidence": ".github/workflows/ci.yml esiste ma i passi test/lint sono commentati/echo 'TODO' (stub pre-scaffold).", "why": "La CI e' il gate di feedback automatico e obbligatorio.", "consequence": "Modifiche rotte/non lintate possono fondersi: i comandi reali (./gradlew test, ktlintCheck, lintDebug) ora funzionano ma non sono cablati.", "fixable_by": "skill", "fix_ref": "/agent-ready fix cicd_automation_governance", "effort": "Low" },
+        "lint_format_automated": { "score": 100, "weight": 25, "layer": "portable", "na": false, "evidence": "ktlint via plugin Gradle + .editorconfig; ktlintCheck/ktlintFormat verificati verdi.", "fixable_by": "skill", "effort": "Low" },
+        "pre_commit_hooks": { "score": 100, "weight": 20, "layer": "portable", "na": false, "evidence": ".pre-commit-config.yaml con ktlint-gradle, detect-secrets e hook standard.", "fixable_by": "skill", "effort": "Low" },
+        "governance": { "score": 0, "weight": 25, "layer": "portable", "na": false, "evidence": "Nessun CODEOWNERS; nessun Dependabot/Renovate.", "why": "CODEOWNERS instrada le review; l'updater tiene sane le dipendenze.", "consequence": "PR senza reviewer designati; dipendenze che marciscono.", "fixable_by": "skill", "fix_ref": "/agent-ready fix cicd_automation_governance", "effort": "Low" }
       }
     },
     "agent_tooling_capabilities": {
-      "weight": 12,
-      "raw_score": 0,
-      "weighted_score": 0.0,
+      "weight": 12, "raw_score": 36.25, "weighted_score": 4.4,
       "subcriteria": {
-        "standard_skills": { "score": 0, "weight": 30, "layer": "portable", "na": false, "evidence": "No project-local SKILL.md.", "why": "Skills package reusable, portable capabilities.", "consequence": "Workflows live only in ad-hoc prompts.", "fixable_by": "partial", "fix_ref": "/agent-ready fix agent_tooling_capabilities scaffolds a SKILL.md skeleton.", "effort": "Med" },
-        "bundled_helper_scripts": { "score": 0, "weight": 15, "layer": "portable", "na": false, "evidence": "No bundled scripts/.", "why": "Scripts keep deterministic logic out of context.", "consequence": "Deterministic ops re-derived each run.", "fixable_by": "partial", "fix_ref": "Add scripts/ within a Skill when one exists.", "effort": "Med" },
-        "mcp_declaration": { "score": 0, "weight": 25, "layer": "portable", "na": false, "evidence": "No .mcp.json.", "why": "Declares expected tools/servers reproducibly.", "consequence": "Each user wires servers manually.", "fixable_by": "skill", "fix_ref": "/agent-ready fix agent_tooling_capabilities generates a baseline .mcp.json.", "effort": "Low" },
-        "nav_comprehension_mcp_servers": { "score": 0, "weight": 20, "layer": "portable", "na": false, "evidence": "No Serena/Sourcegraph/Context7 wired up.", "why": "Strongest comprehension levers when wired up.", "consequence": "Agents rely on fuzzy search.", "fixable_by": "manual", "fix_ref": "Wire Serena once Kotlin sources exist (Phase 5 advice).", "effort": "Med" },
-        "custom_commands": { "score": 0, "weight": 10, "layer": "target", "na": false, "evidence": "No .claude/commands/.", "why": "Captures repeatable per-agent workflows (legacy-positive).", "consequence": "Weakest tooling signal; prefer Skills.", "fixable_by": "partial", "fix_ref": "Prefer Skills over commands.", "effort": "Low" }
+        "standard_skills": { "score": 75, "weight": 30, "layer": "portable", "na": false, "evidence": "4 SKILL.md OpenSpec validi in .claude/skills/ (frontmatter, progressive disclosure).", "why": "Le Skill sono capability riusabili e portabili.", "consequence": "Senza skill di progetto i workflow specifici restano ad-hoc.", "fixable_by": "partial", "fix_ref": "/agent-ready fix agent_tooling_capabilities", "effort": "Med" },
+        "bundled_helper_scripts": { "score": 25, "weight": 15, "layer": "portable", "na": false, "evidence": "Le skill committate (OpenSpec) non portano una dir scripts/ nel repo.", "why": "Gli script deterministici tengono la logica fuori dal context.", "consequence": "Operazioni deterministiche ri-derivate dal modello.", "fixable_by": "partial", "fix_ref": "/agent-ready fix agent_tooling_capabilities", "effort": "Med" },
+        "mcp_declaration": { "score": 0, "weight": 25, "layer": "portable", "na": false, "evidence": "Nessun .mcp.json (ne' .cursor/.vscode mcp) committato nel repo.", "why": "Una config MCP committata rende riproducibili i tool attesi.", "consequence": "Ogni utente cabla i server a mano, in modo incoerente.", "fixable_by": "skill", "fix_ref": "/agent-ready fix agent_tooling_capabilities", "effort": "Low" },
+        "nav_comprehension_mcp_servers": { "score": 0, "weight": 20, "layer": "portable", "na": false, "evidence": "Nessun Serena/Sourcegraph/Context7 dichiarato nel repo (anche se disponibili a livello sessione).", "why": "Sono la forma cablata dei migliori strumenti di comprensione.", "consequence": "Navigazione fuzzy anche dove il codice e' amenabile a LSP.", "fixable_by": "manual", "fix_ref": "Registra Serena/Context7 nella config MCP del progetto.", "effort": "Med" },
+        "custom_commands": { "score": 100, "weight": 10, "layer": "target", "na": false, "evidence": ".claude/commands/opsx/*.md (apply, archive, explore, propose).", "fixable_by": "partial", "effort": "Low" }
       }
     },
     "security_sandbox": {
-      "weight": 12,
-      "raw_score": 43.75,
-      "weighted_score": 5.25,
+      "weight": 12, "raw_score": 47.5, "weighted_score": 5.7,
       "subcriteria": {
-        "committed_isolation_config": { "score": 0, "weight": 20, "layer": "portable", "na": false, "evidence": "No .devcontainer/.", "why": "True isolation is the only reliable boundary for autonomous execution.", "consequence": "Compromised code could exfiltrate freely.", "fixable_by": "partial", "fix_ref": "/agent-ready fix security_sandbox scaffolds a .devcontainer with egress allowlist.", "effort": "Med" },
-        "documented_execution_policy": { "score": 100, "weight": 15, "layer": "portable", "na": false, "evidence": "docs/agent-execution.md (LINCE/devcontainer/OS-sandbox/hosted + safe-to-run list); AGENTS.md security section.", "note": "Execution policy documented." },
-        "agent_permission_policy": { "score": 0, "weight": 15, "layer": "target", "na": false, "evidence": "No restrictive .claude/settings.json deny rules committed.", "why": "Constrains what an agent may do unprompted (CVE-2025-59536 caveat).", "consequence": "Agents may run commands unprompted.", "fixable_by": "manual", "fix_ref": "Author restrictive deny rules per threat model.", "effort": "Med" },
-        "secret_hygiene": { "score": 75, "weight": 25, "layer": "portable", "na": false, "evidence": "secret_hygiene.py: .gitignore 100% secret coverage, .env.example present (no real values), no committed secrets. No CI secret scanning yet.", "why": "AI commits leak secrets at ~2x baseline.", "consequence": "No push-protection layer yet.", "fixable_by": "partial", "fix_ref": "Enable GitHub secret scanning + push protection.", "effort": "Med" },
-        "supply_chain_pinning": { "score": 0, "weight": 15, "layer": "portable", "na": false, "evidence": "No lockfiles / Gradle dependency locking; no Dependabot/Renovate.", "why": "Pins the dependency surface CI/agents install.", "consequence": "Non-reproducible builds; silent drift.", "fixable_by": "partial", "fix_ref": "Enable Gradle dependency locking + Dependabot (gradle) once deps exist.", "effort": "Low" },
-        "injection_hygiene": { "score": 100, "weight": 10, "layer": "portable", "na": false, "evidence": "Instructions live only in AGENTS.md; docs/spec are descriptive, no instruction-like/executable content.", "note": "Clean." }
+        "committed_isolation_config": { "score": 0, "weight": 20, "layer": "portable", "na": false, "evidence": "Nessun .devcontainer/ ne' altra config di isolamento committata.", "why": "L'isolamento vero e' l'unico confine affidabile per l'esecuzione autonoma.", "consequence": "Codice compromesso (dep/MCP) puo' esfiltrare segreti/rete.", "fixable_by": "partial", "fix_ref": "/agent-ready fix security_sandbox", "effort": "Med" },
+        "documented_execution_policy": { "score": 75, "weight": 15, "layer": "portable", "na": false, "evidence": "docs/agent-execution.md presente + sezione 'Sicurezza e comandi sicuri' in AGENTS.md con lista comandi safe e opzioni di sandbox.", "why": "E' dove le sandbox runtime non rilevabili guadagnano credito.", "consequence": "Senza policy l'isolamento e' incoerente tra contributor.", "fixable_by": "skill", "effort": "Low" },
+        "agent_permission_policy": { "score": 25, "weight": 15, "layer": "target", "na": false, "evidence": "Nessun .claude/settings.json restrittivo committato (settings.local.json e' gitignored).", "why": "Una policy restrittiva committata vincola le azioni senza approvazione.", "consequence": "Le azioni dipendono dalle approvazioni di sessione; nessun deny committato (ne' superficie d'attacco).", "fixable_by": "manual", "fix_ref": "Definire deny rule in .claude/settings.json (rivedendo la superficie, CVE-2025-59536).", "effort": "Med" },
+        "secret_hygiene": { "score": 75, "weight": 25, "layer": "portable", "na": false, "evidence": "secret_hygiene: .gitignore copre 100% dei pattern, .env.example presente, 0 segreti committati; detect-secrets in pre-commit. Manca scanning/push-protection lato host CI.", "why": "I commit AI-assisted perdono segreti a ~2x il baseline.", "consequence": "Senza scanning host un segreto potrebbe arrivare al remote.", "fixable_by": "partial", "fix_ref": "/agent-ready fix security_sandbox", "effort": "Med" },
+        "supply_chain_pinning": { "score": 25, "weight": 15, "layer": "portable", "na": false, "evidence": "Nessun lockfile committato ne' dependency-locking Gradle; nessun Dependabot/Renovate. Versioni pinnate letteralmente nei .kts ma le transitive non sono bloccate.", "why": "I lockfile pinnano la superficie che agenti/CI installano.", "consequence": "Build non riproducibili; una transitive compromessa entra in silenzio.", "fixable_by": "partial", "fix_ref": "/agent-ready fix security_sandbox", "effort": "Low" },
+        "injection_hygiene": { "score": 100, "weight": 10, "layer": "portable", "na": false, "evidence": "Istruzioni solo in file fidati (AGENTS.md/bridge); nessun contenuto instruction-like iniettato nei doc.", "fixable_by": "manual", "effort": "Med" }
       }
     },
     "spec_driven_workflow_docs": {
-      "weight": 10,
-      "raw_score": 48.75,
-      "weighted_score": 4.9,
+      "weight": 10, "raw_score": 60.0, "weighted_score": 6.0,
       "subcriteria": {
-        "spec_tasks_dir": { "score": 75, "weight": 25, "layer": "portable", "na": false, "evidence": "specs/TEMPLATE.md + a real approved design spec in docs/superpowers/specs/.", "why": "Spec-driven dev steers agents on what to build.", "consequence": "specs/ not yet populated with per-task specs.", "fixable_by": "skill", "fix_ref": "Author delta-scoped specs per change using the template.", "effort": "Low" },
-        "acceptance_criteria": { "score": 50, "weight": 20, "layer": "portable", "na": false, "evidence": "TEMPLATE.md has an acceptance-criteria section; the design spec uses scope/decisions, not explicit checkable criteria.", "why": "Gives a verifiable definition of done.", "consequence": "\"Done\" stays subjective until criteria are written.", "fixable_by": "partial", "fix_ref": "Fill acceptance criteria per spec.", "effort": "Med" },
-        "issue_pr_templates": { "score": 0, "weight": 15, "layer": "portable", "na": false, "evidence": "No .github/ISSUE_TEMPLATE or PR template.", "why": "Standardizes context per unit of work.", "consequence": "Inconsistent issue/PR context.", "fixable_by": "skill", "fix_ref": "/agent-ready fix spec_driven_workflow_docs generates templates.", "effort": "Low" },
-        "adr_decisions": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "Design spec has a 'Decisioni prese in brainstorming' log; no formal docs/adr/.", "why": "ADRs preserve the why behind choices.", "consequence": "Agents may re-litigate settled decisions.", "fixable_by": "partial", "fix_ref": "/agent-ready fix spec_driven_workflow_docs scaffolds docs/adr/.", "effort": "Med" },
-        "docs_comprehension_signals": { "score": 50, "weight": 25, "layer": "portable", "na": false, "evidence": "Strong architecture narrative + data-flow diagram in the design spec; no changelog; no code annotations yet.", "why": "Architecture doc + type/docstring coverage aid comprehension.", "consequence": "No changelog; code legibility unmeasured until code exists.", "fixable_by": "partial", "fix_ref": "Add a CHANGELOG; keep KDoc on public APIs.", "effort": "Med" }
+        "spec_tasks_dir": { "score": 100, "weight": 25, "layer": "portable", "na": false, "evidence": "specs/TEMPLATE.md + openspec/changes/milestone-1-chat-on-device con proposal/design/specs/tasks delta-scoped.", "fixable_by": "skill", "effort": "Low" },
+        "acceptance_criteria": { "score": 75, "weight": 20, "layer": "portable", "na": false, "evidence": "Le spec OpenSpec usano scenari WHEN/THEN (criteri verificabili); tasks con deliverable chiari.", "why": "Criteri espliciti danno una definizione di done verificabile.", "consequence": "Senza criteri il 'done' e' soggettivo.", "fixable_by": "partial", "fix_ref": "/agent-ready fix spec_driven_workflow_docs", "effort": "Med" },
+        "issue_pr_templates": { "score": 0, "weight": 15, "layer": "portable", "na": false, "evidence": "Nessun .github/ISSUE_TEMPLATE/ ne' PR template.", "why": "I template standardizzano il contesto di ogni unita' di lavoro.", "consequence": "Issue/PR con contesto incoerente; review senza checklist.", "fixable_by": "skill", "fix_ref": "/agent-ready fix spec_driven_workflow_docs", "effort": "Low" },
+        "adr_decisions": { "score": 50, "weight": 15, "layer": "portable", "na": false, "evidence": "Niente docs/adr/ dedicato, ma il design del change ha Decisioni D1-D8 (ADR-like) con razionale e alternative scartate.", "why": "Gli ADR preservano il perche' delle scelte.", "consequence": "Senza una sede ADR, le decisioni rischiano di essere ri-litigate.", "fixable_by": "partial", "fix_ref": "/agent-ready fix spec_driven_workflow_docs", "effort": "Med" },
+        "docs_comprehension_signals": { "score": 50, "weight": 25, "layer": "portable", "na": false, "evidence": "Design doc + AGENTS.md + KDoc abbondante nel Kotlin; manca ARCHITECTURE.md/CHANGELOG. coverage_signals.py non misura Kotlin.", "why": "Struttura + segnali misurabili aiutano la comprensione.", "consequence": "Senza overview architetturale e changelog l'agente reverse-engineera.", "fixable_by": "partial", "fix_ref": "/agent-ready fix spec_driven_workflow_docs", "effort": "Med" }
       }
     }
   },
   "script_signals": {
     "available": true,
-    "repo_map": { "files_analyzed": 0 },
-    "file_metrics": { "total_source_files": 8, "total_loc": 424, "oversized_file_count": 0 },
-    "coverage_signals": { "files_analyzed": 0 },
+    "notes": "repo_map/coverage_signals/test_commands sono Python/JS-oriented: 0 segnali su Kotlin (false-negative); sovrascritti con evidenza DISCOVER (AGENTS.md, file_metrics).",
+    "file_metrics": { "total_source_files": 55, "total_loc": 3750, "oversized_file_count": 0, "kotlin_files": 31, "kotlin_loc": 1673 },
     "secret_hygiene": { "gitignore_coverage_pct": 100.0, "env_example_present": true, "committed_secret_count": 0 },
     "lockfile_check": { "lockfile_count": 0, "strong_lockfile_committed": false },
-    "test_commands": { "has_test_command": false, "has_build_command": false, "has_lint_command": false },
-    "instruction_audit": { "file_count": 2, "any_over_conciseness_limit": false, "note": "CLAUDE.md duplication flag is the symlink to AGENTS.md, not drift" }
+    "instruction_audit": { "agents_md_lines": 83, "approx_tokens": 1120, "over_conciseness_limit": false, "bridge": "CLAUDE.md->AGENTS.md symlink" }
   },
   "top_improvements": [
-    { "dimension": "testing_feedback", "potential_gain": 12.8, "effort": "High", "description": "No tests yet — add unit tests (Chunker, cosine ranking, extraction, PromptBuilder) as code lands." },
-    { "dimension": "agent_tooling_capabilities", "potential_gain": 12.0, "effort": "Low", "description": "No MCP declaration / Skills / nav servers — add .mcp.json + wire Serena once Kotlin sources exist." },
-    { "dimension": "navigability_code_intelligence", "potential_gain": 9.3, "effort": "Med", "description": "No source/build yet — repo map, dependency graph, and README fill in as the app is scaffolded." },
-    { "dimension": "cicd_automation_governance", "potential_gain": 8.1, "effort": "Low", "description": "CI/lint are placeholders; add CODEOWNERS + Dependabot and uncomment Gradle steps once buildable." },
-    { "dimension": "security_sandbox", "potential_gain": 6.8, "effort": "Med", "description": "Add a .devcontainer with egress allowlist; enable secret scanning + dependency pinning." }
+    { "dimension": "agent_tooling_capabilities", "potential_gain": 7.65, "effort": "Low", "description": "Dichiarare un .mcp.json di progetto (+ wiring Serena/Context7)." },
+    { "dimension": "cicd_automation_governance", "potential_gain": 6.65, "effort": "Low", "description": "Cablare i comandi reali nella CI (./gradlew test, ktlintCheck, lintDebug, gia' verdi) e aggiungere CODEOWNERS + Dependabot." },
+    { "dimension": "security_sandbox", "potential_gain": 6.3, "effort": "Med", "description": "Supply-chain pinning (dependency-locking Gradle/Dependabot) e config di isolamento (.devcontainer)." },
+    { "dimension": "navigability_code_intelligence", "potential_gain": 5.27, "effort": "Low", "description": "Aggiungere README.md di overview e una repo-map/ARCHITECTURE." },
+    { "dimension": "testing_feedback", "potential_gain": 4.6, "effort": "Med", "description": "Coverage (jacoco) + subset 'fast' documentato; estendere i test oltre la logica pura." }
   ]
 }
