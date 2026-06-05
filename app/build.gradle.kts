@@ -117,4 +117,8 @@ dependencies {
     // --- Test unitari JVM (logica pura: backend, contesto chat, cap, stato modello, storage) ---
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+    // --- Test strumentati on-device (smoke inferenza reale, vedi InferenceSmokeTest) ---
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
