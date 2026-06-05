@@ -9,8 +9,8 @@
 ## 2. Spike di build LiteRT-LM (de-risk D2 / Open Questions)
 
 - [x] 2.1 Far compilare un caricamento minimo con l'API reale (`com.google.ai.edge.litertlm.*`): `Engine(EngineConfig(modelPath, Backend.GPU(), cacheDir))` → `initialize()` — _compila contro litertlm 0.11.0._
-- [ ] 2.2 Procurare il `.litertlm` di Gemma 4 E2B: copiarlo dalla Gallery (`adb shell cp …/com.google.ai.edge.gallery/files/Gemma_4_E2B_it/*/gemma-4-E2B-it.litertlm /sdcard/Download/`) e `adb push` nella nostra app — nessun ri-download (D8) — _⏸️ BLOCCATO: richiede il device._
-- [ ] 2.3 Eseguire una singola inferenza con `createConversation(...)` → `sendMessageAsync(Contents.of(Content.Text(...))).collect { }`, confermando: **streaming dal Flow**, **`Backend.GPU()` davvero accelerato sulla Mali nella NOSTRA app** (Open Question critica), nessun OOM — _⏸️ BLOCCATO: richiede il device._
+- [x] 2.2 Procurare il `.litertlm` di Gemma 4 E2B: copiarlo dalla Gallery (`adb shell cp …/com.google.ai.edge.gallery/files/Gemma_4_E2B_it/*/gemma-4-E2B-it.litertlm /sdcard/Download/`) e `adb push` nella nostra app — nessun ri-download (D8) — _✅ 2026-06-05: copia sana in `files/models/` via `run-as`, md5 verificato (`1b8446…`) identico all'originale Gallery. Attenzione: il primo import (SAF, codice pre-fix) aveva **corrotto il file a parità di dimensione** — root cause dello storico `Input tensor 11 lacks data`; vedi `docs/m1-inference-review-2026-06-04.md`._
+- [x] 2.3 Eseguire una singola inferenza con `createConversation(...)` → `sendMessageAsync(Contents.of(Content.Text(...))).collect { }`, confermando: **streaming dal Flow**, **`Backend.GPU()` davvero accelerato sulla Mali nella NOSTRA app** (Open Question critica), nessun OOM — _✅ 2026-06-05: `InferenceSmokeTest` strumentato passa su CPU e **GPU** (OK 2 tests, 19,8 s; init GPU 8,6 s, niente SIGSEGV); streaming verificato anche dalla chat reale. Open Question critica risolta: la GPU funziona in casa nostra col file integro._
 - [x] 2.4 Annotare nel design eventuali scostamenti dell'API reale vs. attesa; se la GPU non accelera in casa nostra, decidere CPU vs. tuning manifest — _annotato in `design.md` (nessuno scostamento API); la decisione GPU/CPU dipende dal test 2.3 (device)._
 
 ## 3. Inference engine (spec `inference-engine`)
@@ -50,11 +50,11 @@
 ## 7. Test e verifica
 
 - [x] 7.1 Assicurare la copertura unit JVM dei componenti puri (decisione backend, contesto chat, cap token, stato modello, check storage) — _24 unit test verdi._
-- [ ] 7.2 Test manuale sul Poco X6 Pro: download modello, chat in streaming, confronto GPU vs CPU, assenza di OOM, latenza coerente con lo spike — _⏸️ BLOCCATO: richiede il device._
-- [ ] 7.3 Annotare i risultati del test sul device (verdetto coerente con la memory `spike-gemma4-e2b-poco`) — _⏸️ BLOCCATO: richiede il device._
+- [x] 7.2 Test manuale sul Poco X6 Pro: download modello, chat in streaming, confronto GPU vs CPU, assenza di OOM, latenza coerente con lo spike — _✅ 2026-06-05: import modello (con verifica md5), chat in streaming dalla UI reale (risposta coerente, reload da cache ~1 s), smoke CPU+GPU verdi, nessun OOM osservato; init GPU 8,6 s coerente con lo spike (~9 s). Il **benchmark formale** GPU vs CPU su decode/prefill resta da fare a mente fredda (rinviato al bivio M2)._
+- [x] 7.3 Annotare i risultati del test sul device (verdetto coerente con la memory `spike-gemma4-e2b-poco`) — _✅ annotati in `docs/m1-inference-review-2026-06-04.md` (sezioni "Root cause trovata" e "Validazione finale"); memoria di progetto aggiornata._
 
 ## 8. Documentazione e chiusura
 
 - [x] 8.1 Aggiornare la tabella *Comandi* di `CLAUDE.md`/`AGENTS.md` con i comandi Gradle reali (rimuovere il TODO-by-stack)
 - [x] 8.2 Aggiornare il design con le risposte alle Open Questions emerse durante l'implementazione
-- [ ] 8.3 Verifica finale: tutti gli scenari delle spec coperti; pronto per il bivio del Milestone 2 (RAG locale vs MCP host) — _verifica JVM/build completata; gli scenari on-device (streaming reale, GPU, OOM, latenza) restano da validare sul device (7.2/7.3)._
+- [x] 8.3 Verifica finale: tutti gli scenari delle spec coperti; pronto per il bivio del Milestone 2 (RAG locale vs MCP host) — _✅ 2026-06-05: scenari on-device validati (streaming reale, GPU, niente OOM, init coerente con lo spike); 5.2/5.5 rinviati by design (staging import-da-file). **Pronto per il bivio M2.**_

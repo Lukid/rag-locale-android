@@ -56,19 +56,19 @@ DocumentSource.extract() : NormalizedText
   └─ UrlSource (link)                 → Jsoup + Readability4J (richiede rete 1 volta)
 
 NormalizedText → Chunker(size, overlap) → List<Chunk>
-Chunk → GeckoEmbedder → Vector(768)
+Chunk → EmbeddingGemmaEmbedder → Vector(dim modello)
 (Chunk.text + Vector) → SqliteVectorStore
 
 # A ogni domanda:
-Query → GeckoEmbedder → QueryVector
+Query → EmbeddingGemmaEmbedder → QueryVector
 QueryVector → SqliteVectorStore.search(topK, cosine) → List<RetrievedChunk{text, score}>
 RetrievedChunk[] → PromptBuilder → Gemma → Answer{text, citations}
 ```
 
 ### Componenti (unità a responsabilità singola)
 1. **Ingestion** — `DocumentSource` con 3 implementazioni → `NormalizedText`. La sorgente URL è l'unica che tocca la rete.
-2. **Chunker** — spezza il testo (size/overlap configurabili); deve tenere il prompt finale entro la context window di Gemma-3 1B (`topK × chunkSize` budget-aware).
-3. **Embedder** — wrapper su Gecko; stessa funzione per chunk e query.
+2. **Chunker** — spezza il testo (size/overlap configurabili); deve tenere ragionevole il budget `topK × chunkSize` per RAM, latenza e batteria, anche se Gemma 4 E2B ha context ampia.
+3. **Embedder** — wrapper su EmbeddingGemma; Gecko resta fallback SDK se EmbeddingGemma non e' disponibile.
 4. **Vector store** — `SqliteVectorStore` (persistente); ricerca cosine top-K.
 5. **Generator** — `PromptBuilder` (chunk + domanda → prompt grounded) + chiamata Gemma; estrae le citazioni.
 6. **UI didattica** — schermata di ingestion (scegli file/PDF/incolla link) + chat; pannello che espone chunk recuperati, score e chunk citati.
