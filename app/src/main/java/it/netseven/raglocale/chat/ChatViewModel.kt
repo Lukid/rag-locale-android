@@ -9,11 +9,13 @@ import it.netseven.raglocale.inference.InferenceEngine
 import it.netseven.raglocale.modelmanager.ModelRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 /**
@@ -60,7 +62,7 @@ class ChatViewModel
             if (trimmed.isEmpty() || _isGenerating.value) return
 
             val history = _messages.value
-            val prompt = ChatContextBuilder.build(history, trimmed)
+            val request = ChatContextBuilder.buildRequest(history, trimmed)
 
             _messages.value = history +
                 ChatMessage(Role.USER, trimmed) +
@@ -82,17 +84,30 @@ class ChatViewModel
                         engine.load(path, prefs.backend.first())
 
                         val cap = prefs.maxOutputTokens.first()
-                        engine.generate(prompt).collect { chunk ->
-                            builder.append(chunk)
-                            updateStreaming(builder.toString())
-                            if (OutputBudget.reachedCap(builder.toString(), cap)) {
-                                // cap raggiunto: interruzione pulita mantenendo il prodotto (4.3)
-                                throw CapReachedException
+                        withTimeout(GENERATION_TIMEOUT_MS) {
+                            engine.generate(request).collect { chunk ->
+                                builder.append(chunk)
+                                if (OutputSanity.looksCorrupt(builder.toString())) {
+                                    throw CorruptOutputException
+                                }
+                                updateStreaming(builder.toString())
+                                if (OutputBudget.reachedCap(builder.toString(), cap)) {
+                                    // cap raggiunto: interruzione pulita mantenendo il prodotto (4.3)
+                                    throw CapReachedException
+                                }
                             }
                         }
                         finishStreaming(builder.toString())
                     } catch (e: CapReachedException) {
                         finishStreamingKeepCurrent()
+                    } catch (e: CorruptOutputException) {
+                        engine.unload()
+                        _error.value = CORRUPT_OUTPUT_MESSAGE
+                        finishStreaming("[$CORRUPT_OUTPUT_MESSAGE]")
+                    } catch (e: TimeoutCancellationException) {
+                        engine.unload()
+                        _error.value = GENERATION_TIMEOUT_MESSAGE
+                        finishStreaming("[$GENERATION_TIMEOUT_MESSAGE]")
                     } catch (e: CancellationException) {
                         finishStreamingKeepCurrent()
                         throw e
@@ -140,7 +155,14 @@ class ChatViewModel
 
         private object CapReachedException : Exception()
 
+        private object CorruptOutputException : Exception()
+
         companion object {
             private const val NO_MODEL_MESSAGE = "Nessun modello attivo: importane/selezionane uno nel Model manager."
+            private const val GENERATION_TIMEOUT_MS = 120_000L
+            private const val CORRUPT_OUTPUT_MESSAGE =
+                "Generazione interrotta: output non valido dal runtime locale. Il modello potrebbe essere incompatibile."
+            private const val GENERATION_TIMEOUT_MESSAGE =
+                "Generazione interrotta: il runtime locale non ha completato la risposta in tempo."
         }
     }

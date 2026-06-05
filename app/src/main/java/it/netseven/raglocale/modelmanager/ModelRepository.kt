@@ -8,6 +8,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +38,7 @@ class ModelRepository
                 fileExists = file.exists(),
                 fileSizeBytes = if (file.exists()) file.length() else 0L,
                 downloadInProgress = false,
+                expectedSizeBytes = model.sizeBytes,
             )
         }
 
@@ -50,17 +54,29 @@ class ModelRepository
         ): Result<File> =
             withContext(Dispatchers.IO) {
                 runCatching {
+                    require(model.fileName.endsWith(".litertlm", ignoreCase = true)) {
+                        "Il modello atteso deve essere un file .litertlm"
+                    }
                     val dest = fileFor(model)
+                    val part = File(modelsDir, "${model.fileName}.part")
+                    part.delete()
                     context.contentResolver.openInputStream(uri).use { input ->
                         requireNotNull(input) { "Impossibile aprire il file selezionato" }
-                        dest.outputStream().use { output -> input.copyTo(output) }
+                        part.outputStream().use { output -> input.copyTo(output) }
                     }
+                    require(isReadyFile(part, model)) {
+                        "File modello incompleto o non coerente con ${model.displayName}"
+                    }
+                    moveIntoPlace(part, dest)
                     dest
+                }.onFailure {
+                    File(modelsDir, "${model.fileName}.part").delete()
                 }
             }
 
         fun remove(model: ModelInfo): Boolean {
             val file = fileFor(model)
+            File(modelsDir, "${model.fileName}.part").delete()
             return file.exists() && file.delete()
         }
 
@@ -73,7 +89,7 @@ class ModelRepository
             val id = activeModelId() ?: ModelCatalog.default.id
             val model = ModelCatalog.byId(id) ?: return null
             val file = fileFor(model)
-            return if (file.exists() && file.length() > 0) file else null
+            return if (isReadyFile(file, model)) file else null
         }
 
         /**
@@ -82,4 +98,31 @@ class ModelRepository
          * l'OAuth/token sono la rifinitura successiva (vedi tasks.md §5 e design D8).
          */
         fun isInAppDownloadSupported(): Boolean = false
+
+        private fun isReadyFile(
+            file: File,
+            model: ModelInfo,
+        ): Boolean =
+            ModelStatusResolver.resolve(
+                fileExists = file.exists(),
+                fileSizeBytes = if (file.exists()) file.length() else 0L,
+                downloadInProgress = false,
+                expectedSizeBytes = model.sizeBytes,
+            ) == ModelStatus.READY
+
+        private fun moveIntoPlace(
+            source: File,
+            dest: File,
+        ) {
+            try {
+                Files.move(
+                    source.toPath(),
+                    dest.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE,
+                )
+            } catch (e: AtomicMoveNotSupportedException) {
+                Files.move(source.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
     }

@@ -9,8 +9,11 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.LogSeverity
+import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,8 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -35,9 +37,8 @@ import javax.inject.Singleton
  * Manager singleton dell'inferenza on-device su **LiteRT-LM** (vedi memory reference-anti-vocale).
  *
  * - **Modello residente** (D5): l'init costoso (~9s su GPU) avviene una sola volta; la
- *   `Conversation` viene ricreata a ogni generazione per un controllo *esplicito* del
- *   contesto — la cronologia è inclusa nel prompt da
- *   [it.netseven.raglocale.chat.ChatContextBuilder]. L'Engine resta caldo.
+ *   `Conversation` viene ricreata a ogni generazione passando system prompt e cronologia
+ *   strutturata a `ConversationConfig`. L'Engine resta caldo.
  * - **Default GPU** con **fallback automatico GPU→CPU** all'init fallita (D3), risolto
  *   da [BackendSelection].
  * - **Una sola conversazione alla volta**: gli accessi sono serializzati con un [Mutex].
@@ -57,7 +58,8 @@ class InferenceEngine
 
         private var engine: Engine? = null
         private var currentModelPath: String? = null
-        private var currentBackend: Backend? = null
+        private var currentRequestedBackend: Backend? = null
+        private var currentEffectiveBackend: Backend? = null
 
         private val generationMutex = Mutex()
         private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -71,125 +73,174 @@ class InferenceEngine
         }
 
         /**
-         * Carica il modello sul backend preferito, con fallback GPU→CPU.
-         * Idempotente: se è già pronto con lo stesso path, resetta solo il keep-alive (D5).
+         * Carica il modello sul backend preferito, con fallback GPU->CPU.
+         * Idempotente solo su path + backend richiesto: cambiare GPU/CPU ricrea l'engine.
          */
         suspend fun load(
             modelPath: String,
             preferred: Backend,
         ) = withContext(Dispatchers.IO) {
-            if (_isReady.value && currentModelPath == modelPath) {
-                resetKeepAlive()
-                return@withContext
-            }
-            unloadInternal()
-            _state.value = EngineState.Loading
+            generationMutex.withLock {
+                if (_isReady.value && currentModelPath == modelPath && currentRequestedBackend == preferred) {
+                    startKeepAlive()
+                    return@withLock
+                }
 
-            if (!File(modelPath).exists()) {
-                _state.value = EngineState.Error("File modello non trovato: $modelPath")
-                return@withContext
-            }
+                unloadInternalLocked()
+                _state.value = EngineState.Loading
 
-            var gpuFailed = false
-            val effective: Backend
-            if (preferred == Backend.GPU) {
-                if (tryInit(modelPath, Backend.GPU)) {
-                    effective = Backend.GPU
-                } else {
-                    gpuFailed = true
-                    if (!tryInit(modelPath, Backend.CPU)) {
-                        _state.value = EngineState.Error("Inizializzazione del modello fallita su GPU e CPU.")
-                        return@withContext
+                if (!File(modelPath).exists()) {
+                    _state.value = EngineState.Error("File modello non trovato: $modelPath")
+                    return@withLock
+                }
+
+                var gpuFailed = false
+                val effective: Backend
+                val initializedEngine: Engine
+                if (preferred == Backend.GPU) {
+                    val gpuEngine = tryCreateEngine(modelPath, Backend.GPU)
+                    if (gpuEngine != null) {
+                        initializedEngine = gpuEngine
+                        effective = Backend.GPU
+                    } else {
+                        gpuFailed = true
+                        val cpuEngine = tryCreateEngine(modelPath, Backend.CPU)
+                        if (cpuEngine == null) {
+                            _state.value = EngineState.Error("Inizializzazione del modello fallita su GPU e CPU.")
+                            return@withLock
+                        }
+                        initializedEngine = cpuEngine
+                        effective = Backend.CPU
                     }
+                } else {
+                    val cpuEngine = tryCreateEngine(modelPath, Backend.CPU)
+                    if (cpuEngine == null) {
+                        _state.value = EngineState.Error("Inizializzazione del modello fallita su CPU.")
+                        return@withLock
+                    }
+                    initializedEngine = cpuEngine
                     effective = Backend.CPU
                 }
-            } else {
-                if (!tryInit(modelPath, Backend.CPU)) {
-                    _state.value = EngineState.Error("Inizializzazione del modello fallita su CPU.")
-                    return@withContext
-                }
-                effective = Backend.CPU
-            }
 
-            val resolution = BackendSelection.resolve(preferred, gpuInitFailed = gpuFailed)
-            currentModelPath = modelPath
-            currentBackend = effective
-            _isReady.value = true
-            _state.value = EngineState.Ready(resolution.effective, resolution.didFallback, resolution.warning)
-            startKeepAlive()
+                val resolution = BackendSelection.resolve(preferred, gpuInitFailed = gpuFailed)
+                engine = initializedEngine
+                currentModelPath = modelPath
+                currentRequestedBackend = preferred
+                currentEffectiveBackend = effective
+                _isReady.value = true
+                _state.value = EngineState.Ready(resolution.effective, resolution.didFallback, resolution.warning)
+                startKeepAlive()
+            }
         }
 
-        private fun tryInit(
+        private fun tryCreateEngine(
             path: String,
             backend: Backend,
-        ): Boolean =
-            try {
+        ): Engine? {
+            var newEngine: Engine? = null
+            return try {
                 Engine.setNativeMinLogSeverity(LogSeverity.ERROR)
+                Log.i(
+                    TAG,
+                    "Init LiteRT-LM chat text-only: backend=$backend, visionBackend=null, " +
+                        "audioBackend=null, maxNumTokens=4000",
+                )
                 val config =
                     EngineConfig(
                         modelPath = path,
                         backend = backend.toLiteRt(),
-                        cacheDir = appContext.cacheDir.absolutePath,
+                        // AI Edge Gallery inizializza il task "AI Chat" con supportImage=false e
+                        // supportAudio=false; i backend vision/audio si accendono solo nei task
+                        // immagine/audio. Forzarli qui provoca "Input tensor 11 lacks data" in
+                        // generazione e token corrotti sul Poco.
+                        visionBackend = null,
+                        audioBackend = null,
+                        maxNumTokens = 4000,
+                        cacheDir = if (path.startsWith("/data/local/tmp")) appContext.cacheDir.absolutePath else null,
                     )
-                val newEngine = Engine(config)
+                newEngine = Engine(config)
                 newEngine.initialize()
-                engine = newEngine
                 Log.i(TAG, "Engine inizializzato su $backend")
-                true
+                newEngine
             } catch (e: Exception) {
                 Log.e(TAG, "Init fallita su $backend", e)
-                engine = null
-                false
+                closeQuietly(newEngine)
+                null
             } catch (e: Error) {
                 // UnsatisfiedLinkError e simili (es. GPU/OpenCL assente)
                 Log.e(TAG, "Errore nativo init su $backend", e)
-                engine = null
-                false
+                closeQuietly(newEngine)
+                null
             }
+        }
 
         /**
          * Genera la risposta in **streaming** (D4): emette ogni chunk man mano che LiteRT-LM
-         * lo produce. Serializzata (una conversazione alla volta). La cronologia di sessione
-         * deve essere già inclusa nel [prompt].
+         * lo produce. Serializzata (una conversazione alla volta).
          */
-        fun generate(prompt: String): Flow<String> =
-            flow {
-                val activeEngine = engine ?: throw IllegalStateException("Modello non caricato")
+        fun generate(request: ConversationRequest): Flow<String> =
+            channelFlow {
                 generationMutex.withLock {
-                    resetKeepAlive()
-                    val conversation: Conversation = activeEngine.createConversation(defaultConversationConfig())
+                    cancelKeepAlive()
+                    val activeEngine = engine ?: throw IllegalStateException("Modello non caricato")
+                    val conversation: Conversation = activeEngine.createConversation(conversationConfigFor(request))
+                    val done = CompletableDeferred<Unit>()
                     try {
-                        conversation.sendMessageAsync(Contents.of(Content.Text(prompt)))
-                            .catch { err -> Log.e(TAG, "Errore streaming", err) }
-                            .collect { message -> emit(message.toString()) }
+                        conversation.sendMessageAsync(
+                            Contents.of(Content.Text(request.userMessage.trim())),
+                            object : MessageCallback {
+                                override fun onMessage(message: Message) {
+                                    trySend(message.textChunk())
+                                }
+
+                                override fun onDone() {
+                                    done.complete(Unit)
+                                }
+
+                                override fun onError(throwable: Throwable) {
+                                    Log.e(TAG, "Errore streaming", throwable)
+                                    done.completeExceptionally(throwable)
+                                }
+                            },
+                        )
+                        done.await()
                     } finally {
                         conversation.close()
-                        resetKeepAlive()
+                        startKeepAlive()
                     }
                 }
             }.flowOn(Dispatchers.IO)
 
-        private fun defaultConversationConfig(): ConversationConfig =
+        private fun conversationConfigFor(request: ConversationRequest): ConversationConfig =
             ConversationConfig(
                 samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.8),
+                systemInstruction = request.systemInstruction?.let { Contents.of(it) },
+                initialMessages =
+                    request.initialMessages.map { turn ->
+                        when (turn.role) {
+                            ConversationRole.USER -> Message.user(turn.text)
+                            ConversationRole.MODEL -> Message.model(turn.text)
+                        }
+                    },
             )
 
         /** Scarica il modello dalla memoria. */
         fun unload() {
-            unloadInternal()
-            _state.value = EngineState.Idle
+            scope.launch {
+                generationMutex.withLock {
+                    unloadInternalLocked()
+                    _state.value = EngineState.Idle
+                }
+            }
         }
 
-        private fun unloadInternal() {
-            cancelKeepAlive()
-            try {
-                engine?.close()
-            } catch (t: Throwable) {
-                Log.w(TAG, "Errore in chiusura engine", t)
-            }
+        private fun unloadInternalLocked(cancelTimer: Boolean = true) {
+            if (cancelTimer) cancelKeepAlive()
+            closeQuietly(engine)
             engine = null
             currentModelPath = null
-            currentBackend = null
+            currentRequestedBackend = null
+            currentEffectiveBackend = null
             _isReady.value = false
         }
 
@@ -198,20 +249,28 @@ class InferenceEngine
             keepAliveJob =
                 scope.launch {
                     delay(keepAliveMinutes * 60_000L)
-                    if (_isReady.value) {
-                        Log.i(TAG, "Keep-alive scaduto: auto-unload del modello")
-                        unload()
+                    generationMutex.withLock {
+                        if (_isReady.value) {
+                            Log.i(TAG, "Keep-alive scaduto: auto-unload del modello")
+                            unloadInternalLocked(cancelTimer = false)
+                            keepAliveJob = null
+                            _state.value = EngineState.Idle
+                        }
                     }
                 }
-        }
-
-        private fun resetKeepAlive() {
-            if (_isReady.value) startKeepAlive()
         }
 
         private fun cancelKeepAlive() {
             keepAliveJob?.cancel()
             keepAliveJob = null
+        }
+
+        private fun closeQuietly(engineToClose: Engine?) {
+            try {
+                engineToClose?.close()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Errore in chiusura engine", t)
+            }
         }
 
         companion object {
@@ -226,3 +285,11 @@ private fun Backend.toLiteRt(): com.google.ai.edge.litertlm.Backend =
         Backend.GPU -> com.google.ai.edge.litertlm.Backend.GPU()
         Backend.CPU -> com.google.ai.edge.litertlm.Backend.CPU()
     }
+
+private fun Message.textChunk(): String {
+    val text =
+        contents.contents
+            .filterIsInstance<Content.Text>()
+            .joinToString(separator = "") { it.text }
+    return text.ifEmpty { toString() }
+}

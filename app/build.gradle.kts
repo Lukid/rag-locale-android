@@ -75,7 +75,7 @@ android {
 dependencies {
     // --- Inferenza on-device ---
     // LiteRT-LM: runtime principale (artefatti .litertlm). Vedi memory reference-anti-vocale.
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.11.0")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.12.0")
     // MediaPipe GenAI: fallback text-only (artefatti .task).
     implementation("com.google.mediapipe:tasks-genai:0.10.33")
 

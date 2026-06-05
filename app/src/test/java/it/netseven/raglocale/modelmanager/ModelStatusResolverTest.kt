@@ -13,10 +13,14 @@ class ModelStatusResolverTest {
     }
 
     @Test
-    fun `file presente e non vuoto e' pronto`() {
+    fun `file presente sopra soglia minima e' pronto`() {
         assertEquals(
             ModelStatus.READY,
-            ModelStatusResolver.resolve(fileExists = true, fileSizeBytes = 10, downloadInProgress = false),
+            ModelStatusResolver.resolve(
+                fileExists = true,
+                fileSizeBytes = ModelStatusResolver.MIN_READY_FILE_BYTES,
+                downloadInProgress = false,
+            ),
         )
     }
 
@@ -33,6 +37,40 @@ class ModelStatusResolverTest {
         assertEquals(
             ModelStatus.NOT_DOWNLOADED,
             ModelStatusResolver.resolve(fileExists = true, fileSizeBytes = 0, downloadInProgress = false),
+        )
+    }
+
+    @Test
+    fun `file piccolo non basta per essere pronto`() {
+        assertEquals(
+            ModelStatus.NOT_DOWNLOADED,
+            ModelStatusResolver.resolve(fileExists = true, fileSizeBytes = 10, downloadInProgress = false),
+        )
+    }
+
+    @Test
+    fun `dimensione attesa accetta file entro tolleranza`() {
+        assertEquals(
+            ModelStatus.READY,
+            ModelStatusResolver.resolve(
+                fileExists = true,
+                fileSizeBytes = 700,
+                downloadInProgress = false,
+                expectedSizeBytes = 1_000,
+            ),
+        )
+    }
+
+    @Test
+    fun `dimensione attesa rifiuta file troppo parziale`() {
+        assertEquals(
+            ModelStatus.NOT_DOWNLOADED,
+            ModelStatusResolver.resolve(
+                fileExists = true,
+                fileSizeBytes = 699,
+                downloadInProgress = false,
+                expectedSizeBytes = 1_000,
+            ),
         )
     }
 }

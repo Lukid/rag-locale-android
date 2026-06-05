@@ -1,40 +1,43 @@
 package it.netseven.raglocale.chat
 
+import it.netseven.raglocale.inference.ConversationRole
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChatContextBuilderTest {
     @Test
-    fun `con cronologia vuota include preambolo e nuovo messaggio`() {
-        val out =
-            ChatContextBuilder.build(
+    fun `con cronologia vuota produce system instruction e nuovo messaggio`() {
+        val request =
+            ChatContextBuilder.buildRequest(
                 history = emptyList(),
                 userMessage = "Ciao",
-                systemPreamble = "PREAMBOLO",
+                systemInstruction = "PREAMBOLO",
             )
-        assertTrue(out.startsWith("PREAMBOLO"))
-        assertTrue(out.contains("Utente: Ciao"))
-        assertTrue(out.trimEnd().endsWith("Assistente:"))
+        assertEquals("PREAMBOLO", request.systemInstruction)
+        assertTrue(request.initialMessages.isEmpty())
+        assertEquals("Ciao", request.userMessage)
     }
 
     @Test
-    fun `assembla la cronologia nell'ordine dei turni`() {
+    fun `mantiene la cronologia nell'ordine dei turni`() {
         val history =
             listOf(
                 ChatMessage(Role.USER, "Primo"),
                 ChatMessage(Role.MODEL, "Risposta"),
             )
-        val out = ChatContextBuilder.build(history, "Secondo", systemPreamble = null)
-        val idxPrimo = out.indexOf("Utente: Primo")
-        val idxRisposta = out.indexOf("Assistente: Risposta")
-        val idxSecondo = out.indexOf("Utente: Secondo")
-        assertTrue(idxPrimo in 0 until idxRisposta)
-        assertTrue(idxRisposta in 0 until idxSecondo)
+        val request = ChatContextBuilder.buildRequest(history, "Secondo", systemInstruction = null)
+        assertEquals(ConversationRole.USER, request.initialMessages[0].role)
+        assertEquals("Primo", request.initialMessages[0].text)
+        assertEquals(ConversationRole.MODEL, request.initialMessages[1].role)
+        assertEquals("Risposta", request.initialMessages[1].text)
+        assertEquals("Secondo", request.userMessage)
     }
 
     @Test
-    fun `preambolo nullo non aggiunge testo iniziale`() {
-        val out = ChatContextBuilder.build(emptyList(), "X", systemPreamble = null)
-        assertTrue(out.startsWith("Utente: X"))
+    fun `system instruction nulla resta nulla`() {
+        val request = ChatContextBuilder.buildRequest(emptyList(), "X", systemInstruction = null)
+        assertNull(request.systemInstruction)
     }
 }
