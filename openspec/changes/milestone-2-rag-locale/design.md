@@ -39,6 +39,18 @@ EmbeddingGemma on-device nel nostro stack è l'ignoto principale: formato dell'a
 3. **fallback Gecko** (768 dim, default storico dell'SDK) se EmbeddingGemma non è praticabile.
 Lo spike (primo task del milestone) decide tra i tre con criteri espliciti: embedding calcolati correttamente (similarità sensata su frasi di prova in italiano), latenza per chunk, RAM, attrito di integrazione. L'esito va annotato qui.
 
+**Esito ricerca (task 1.1, 2026-06-06)** — la ricerca desk ha ribaltato l'ordine dei candidati:
+
+- **Artefatto**: HF [`litert-community/embeddinggemma-300m`](https://huggingface.co/litert-community/embeddinggemma-300m) — `.tflite` mixed-precision (int4 embedding/FF/proiezioni, int8 attention) in varianti per seq length 256/512/1024/2048 (179–196 MB) + `sentencepiece.model` (4,68 MB) nello stesso repo. Le varianti NPU precompilate coprono solo Tensor G5 / MT6991-6993 / SM8550+ — **non** il Dimensity 8300 del Poco → si usa il `.tflite` generico. Benchmark ufficiali (S25 Ultra): **CPU** seq256 init 17,6 ms, inferenza 66 ms, 110 MB RAM (XNNPACK, 4 thread); GPU init 1,2 s e 762 MB RAM a parità di latenza → **CPU confermata per l'embedder** (D10). Dimensione embedding 768, MRL per troncare a 512/256/128.
+- **Candidato promosso a prima scelta — modulo embedder di `localagents-rag` 0.3.0** (Google Maven `com.google.ai.edge.localagents:localagents-rag:0.3.0`, ultimo update 2025-09-04): l'AAR contiene `GemmaEmbeddingModel(modelPath, tokenizerPath, useGpu)` con `getEmbeddings`/`getBatchEmbeddings` e `EmbedData.TaskType.RETRIEVAL_QUERY / RETRIEVAL_DOCUMENT` — i prefissi prompt di EmbeddingGemma (`task: search result | query: …`, `title: none | text: …`) sono gestiti **internamente** dall'SDK. JNI self-contained (`libgemma_embedding_model_jni.so`, ~24 MB arm64): non tocca LiteRT-LM. Dipendenze POM già presenti nel progetto (okhttp, tasks-genai) o innocue (guava, org.json). Caveat: il repo GitHub `ai-edge-apis` non esiste più e l'artefatto è fermo a set 2025 → manutenzione incerta, ma l'AAR è autosufficiente; l'AAR porta 4 `.so` (~70 MB) di cui usiamo solo l'embedder → escludere gli altri (`gecko_…`, `sqlite_vector_store…`, `text_chunker…`) dal packaging.
+- **LiteRT puro retrocesso a seconda scelta**: il sample ufficiale (`litert-samples/compiled_model_api/semantic_similarity`) è **C++/Bazel**, non Kotlin; il nodo è la tokenizzazione sentencepiece in JVM (nessun binding pronto nello stack) → attrito alto senza beneficio.
+- **Scartato**: il `.litertlm` community (`kontextdev/embeddinggemma-300m-litertlm`): tokenizer semplificato char-based e benchmark placeholder — non production. LiteRT-LM non ha API embedder in Kotlin (verificato nel repo).
+- ~~**Resta per il device (task 1.2/1.3)**~~ — ✅ **SPIKE RIUSCITO sul Poco (2026-06-06, `EmbedderSmokeTest`, OK 2 tests in 18,1 s)**. **D2 SCIOLTA: si usa `GemmaEmbeddingModel` di `localagents-rag:0.3.0` su CPU, variante seq512.** Esiti misurati:
+  - prima chiamata (init incluso) 1,6 s; embedding per documento ~2,2 s (seq512, CPU/XNNPACK) → per l'ingestion serve la progress bar (50 chunk ≈ 2 min); per la query aggiunge ~2 s al TTFT del turno RAG (≈2 s embed + ≈2 s prefill GPU = ~4 s totali, accettabile). Eventuale tuning: variante seq256 se la latenza pesa.
+  - vettori **normalizzati** (norma 1,0) → cosine = dot product;
+  - qualità semantica in italiano eccellente: query "Dove sta dormendo il micio?" → sim 0,70 col chunk "gatto sul divano", 0,61 con la parafrasi "felino sul sofà", 0,14 col chunk estraneo (fotosintesi) — separazione netta;
+  - **convivenza in-process con LiteRT-LM dimostrata**: embedding con l'`Engine` LLM residente e generazione successiva, nessun conflitto JNI.
+
 ### D3 — Vector store: SQLite per persistenza, cosine brute-force in RAM
 Scala demo: un documento lungo → centinaia di chunk; a 768 dim float sono pochi MB. Quindi: persistenza su **SQLite** (tabella `chunks`: id, documento, testo, embedding BLOB, metadati), ricerca con **scan completo in memoria + cosine in Kotlin puro** (top-K con heap). Niente estensioni vettoriali (sqlite-vec) né ANN: complessità non giustificata a questa scala e il ranking fatto a mano È la lezione. Se gli embedding sono normalizzati, cosine = dot product (da verificare nello spike e annotare).
 
@@ -81,8 +93,8 @@ Il workload RAG (prefill lungo) è il caso in cui la GPU vince (TTFT 1,9 s vs 8 
 
 ## Open Questions
 
-- **Formato e fonte dell'artefatto EmbeddingGemma** per on-device (HF `litert-community`? dimensione embedding effettiva? tokenizer incluso?) — lo risolve lo spike.
-- **Convivenza `localagents-rag` (solo embedder) + LiteRT-LM** nello stesso processo, se si sceglie il candidato 2 — lo risolve lo spike.
-- **Embedding normalizzati o no** (cosine vs dot product) — lo risolve lo spike.
+- ~~**Formato e fonte dell'artefatto EmbeddingGemma**~~ — ✅ risolta (task 1.1): `.tflite` mixed-precision da `litert-community/embeddinggemma-300m` + `sentencepiece.model` incluso; dim 768; vedi esito ricerca in D2.
+- ~~**Prompt template per EmbeddingGemma**~~ — ✅ risolta (task 1.1): i prefissi esistono ma li gestisce l'SDK via `EmbedData.TaskType` (RETRIEVAL_QUERY / RETRIEVAL_DOCUMENT); nessun prompt manuale.
+- ~~**Convivenza `localagents-rag` (solo embedder) + LiteRT-LM**~~ — ✅ risolta (spike 1.2, 2026-06-06): dimostrata sul Poco, embedding e generazione con entrambi i runtime residenti, nessun conflitto.
+- ~~**Embedding normalizzati o no**~~ — ✅ risolta (spike 1.3): normalizzati (norma 1,0) → cosine = dot product nel ranking.
 - **Default chunk size/overlap/topK** per il Poco — si tarano in validazione col documento di prova del test della parafrasi.
-- **Prompt template per EmbeddingGemma** (prefissi tipo `task: search result | query:` raccomandati per retrieval) — verificare nello spike se l'artefatto on-device li richiede.

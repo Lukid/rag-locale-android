@@ -2,10 +2,10 @@
 
 ## 1. Spike embedder (de-risk del rischio #1 — primo task assoluto)
 
-- [ ] 1.1 Ricerca dell'artefatto EmbeddingGemma per on-device: fonte (HF `litert-community`?), formato (`.tflite`/`.litertlm`), dimensione embedding, tokenizer incluso, eventuali prefissi di task per il retrieval; annotare le coordinate
-- [ ] 1.2 Far girare l'embedder sul Poco nel nostro stack provando i candidati in ordine (D2): LiteRT puro → modulo embedder di `localagents-rag` standalone → fallback Gecko; misurare latenza per chunk e RAM
-- [ ] 1.3 Verificare la qualità degli embedding su frasi di prova in italiano (similarità sensata, inclusa una coppia di parafrasi) e se i vettori sono normalizzati (cosine vs dot product)
-- [ ] 1.4 Annotare l'esito dello spike in `design.md` (decisione D2 sciolta, Open Questions chiuse); se nessun candidato è praticabile, fermarsi e ridiscutere il design
+- [x] 1.1 Ricerca dell'artefatto EmbeddingGemma per on-device: fonte (HF `litert-community`?), formato (`.tflite`/`.litertlm`), dimensione embedding, tokenizer incluso, eventuali prefissi di task per il retrieval; annotare le coordinate — _✅ 2026-06-06: `litert-community/embeddinggemma-300m` (`.tflite` mixed-precision per seq length + `sentencepiece.model`); candidato promosso: modulo embedder `localagents-rag:0.3.0` (`GemmaEmbeddingModel`, prefissi gestiti dall'SDK, JNI self-contained); LiteRT puro retrocesso (sample solo C++, tokenizer JVM mancante); esiti completi in design.md D2._
+- [x] 1.2 Far girare l'embedder sul Poco nel nostro stack provando i candidati in ordine (D2): LiteRT puro → modulo embedder di `localagents-rag` standalone → fallback Gecko; misurare latenza per chunk e RAM — _✅ 2026-06-06: `GemmaEmbeddingModel` (localagents-rag 0.3.0, candidato promosso dalla ricerca 1.1) su CPU, seq512: init 1,6 s, ~2,2 s/documento; convivenza in-process con LiteRT-LM dimostrata (`EmbedderSmokeTest`, OK 2 tests in 18,1 s)._
+- [x] 1.3 Verificare la qualità degli embedding su frasi di prova in italiano (similarità sensata, inclusa una coppia di parafrasi) e se i vettori sono normalizzati (cosine vs dot product) — _✅ 2026-06-06: parafrasi separata nettamente (sim 0,70/0,61 vs 0,14 per l'estraneo); vettori normalizzati (norma 1,0) → cosine = dot product._
+- [x] 1.4 Annotare l'esito dello spike in `design.md` (decisione D2 sciolta, Open Questions chiuse); se nessun candidato è praticabile, fermarsi e ridiscutere il design — _✅ D2 sciolta: GemmaEmbeddingModel su CPU seq512; Open Questions convivenza e normalizzazione chiuse in design.md._
 
 ## 2. Pipeline pura (Kotlin JVM, senza dipendenze Android)
 

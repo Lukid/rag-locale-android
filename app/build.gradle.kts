@@ -54,6 +54,14 @@ android {
         // Richiesto da LiteRT-LM per le librerie native (GPU/OpenCL).
         jniLibs {
             useLegacyPackaging = true
+            // Da localagents-rag usiamo solo l'embedder Gemma (vedi design M2, D2):
+            // escludiamo le JNI dei moduli non usati (~46 MB sull'APK).
+            excludes +=
+                setOf(
+                    "**/libgecko_embedding_model_jni.so",
+                    "**/libsqlite_vector_store_jni.so",
+                    "**/libtext_chunker_jni.so",
+                )
         }
         resources {
             excludes +=
@@ -78,6 +86,10 @@ dependencies {
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.12.0")
     // MediaPipe GenAI: fallback text-only (artefatti .task).
     implementation("com.google.mediapipe:tasks-genai:0.10.33")
+    // AI Edge RAG SDK: usiamo SOLO il modulo embedder (GemmaEmbeddingModel + tokenizer
+    // sentencepiece via JNI self-contained). Vector store e chunker restano fatti in casa
+    // (design M2, D1/D2); le JNI non usate sono escluse nel blocco packaging.
+    implementation("com.google.ai.edge.localagents:localagents-rag:0.3.0")
 
     // --- Jetpack Compose ---
     implementation(platform("androidx.compose:compose-bom:2025.01.00"))
