@@ -9,10 +9,10 @@
 
 ## 2. Pipeline pura (Kotlin JVM, senza dipendenze Android)
 
-- [ ] 2.1 `Chunker`: size/overlap configurabili, tagli preferenziali ai confini di frase/paragrafo, casi limite (testo corto, overlap ≥ size) + unit test
-- [ ] 2.2 Ranking cosine top-K in Kotlin puro + unit test con vettori deterministici
-- [ ] 2.3 Interfaccia tool-shaped della retrieval (`cerca(query, topK) → chunk con testo/score/riferimento`) e tipi condivisi (`NormalizedText`, chunk) — contratto stabile per UI, PromptBuilder e futuro M3
-- [ ] 2.4 `PromptBuilder` grounded: chunk numerati + istruzione di rispondere solo dal contesto citando i numeri; parsing dei marcatori `[n]` dalla risposta + unit test (incluso il caso senza marcatori validi)
+- [x] 2.1 `Chunker`: size/overlap configurabili, tagli preferenziali ai confini di frase/paragrafo, casi limite (testo corto, overlap ≥ size) + unit test — _✅ TDD, 9 test (vuoto, testo corto, no overflow, copertura senza buchi, overlap, taglio a frase, offset reale, overlap ≥ dimensione)._
+- [x] 2.2 Ranking cosine top-K in Kotlin puro + unit test con vettori deterministici — _✅ TDD, 9 test (identici/ortogonali/opposti, scala-invarianza, vettore nullo, ordinamento top-K, k</> candidati, lista vuota)._
+- [x] 2.3 Interfaccia tool-shaped della retrieval (`cerca(query, topK) → chunk con testo/score/riferimento`) e tipi condivisi (`NormalizedText`, chunk) — contratto stabile per UI, PromptBuilder e futuro M3 — _✅ `RicercaDocumenti` + `ChunkRecuperato`, `NormalizedText` (pkg ingestion)._
+- [x] 2.4 `PromptBuilder` grounded: chunk numerati + istruzione di rispondere solo dal contesto citando i numeri; parsing dei marcatori `[n]` dalla risposta + unit test (incluso il caso senza marcatori validi) — _✅ TDD, 7 test (numerazione/ordine/istruzioni, citazioni valide, fuori range scartate, nessun marcatore, duplicati, multi-cifra)._
 
 ## 3. Vector store e indicizzazione
 
