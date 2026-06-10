@@ -119,6 +119,16 @@ dependencies {
     // --- Rete (download modelli — usato a partire dalla rifinitura download in-app) ---
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // --- Ingestion documenti (sorgenti PDF e URL — design M2 D9) ---
+    // PdfBox-Android: estrazione del layer testo dei PDF. Niente OCR (fuori scope): un PDF
+    // senza testo estraibile viene rilevato e segnalato all'utente.
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+    // Jsoup + Readability4J: estrazione del contenuto principale da una pagina web, con
+    // fallback al testo grezzo se Readability non isola l'articolo. jsoup è dichiarato a
+    // versione esplicita (più recente di quella che trascinerebbe Readability4J).
+    implementation("org.jsoup:jsoup:1.18.3")
+    implementation("net.dankito.readability4j:readability4j:1.0.8")
+
     // --- Hilt DI ---
     implementation("com.google.dagger:hilt-android:2.56.1")
     ksp("com.google.dagger:hilt-compiler:2.56.1")

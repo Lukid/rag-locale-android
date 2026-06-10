@@ -23,11 +23,11 @@
 
 ## 4. Ingestion (staging per sorgente — D9)
 
-- [ ] 4.1 `TextFileSource` (.txt/.md via SAF) → `NormalizedText`; limiti documento (vuoto, troppo grande) con messaggi chiari
-- [ ] 4.2 Pipeline di ingestion end-to-end con progresso (chunk N/M) e indicizzazione persistente — esercitata sulla sola sorgente testo
-- [ ] 4.3 `PdfSource` con PdfBox-Android; rilevamento del PDF senza layer testo (OCR fuori scope, messaggio chiaro)
-- [ ] 4.4 `UrlSource` con Jsoup + Readability4J; fallback al testo grezzo se Readability fallisce; errori rete chiari senza stato parziale nell'indice
-- [ ] 4.5 Unit test dell'estrazione `NormalizedText` per le tre sorgenti (fixture PDF e HTML di esempio)
+- [x] 4.1 `TextFileSource` (.txt/.md via SAF) → `NormalizedText`; limiti documento (vuoto, troppo grande) con messaggi chiari — _✅ TDD. `TextFileSource` legge da `InputStream` (il cablaggio SAF/Uri vive nel ViewModel, gruppo 6) e passa per il `TextNormalizer` condiviso (fine riga, trattini morbidi/zero-width/BOM/NBSP, accenti preservati); tipi-risultato `EsitoEstrazione`/`ErroreIngestion` con messaggio pronto per la UI; documento vuoto → `DocumentoVuoto` (il "troppo grande" è controllato dalla pipeline, 4.2). 14 test (10 normalizer + 4 source)._
+- [x] 4.2 Pipeline di ingestion end-to-end con progresso (chunk N/M) e indicizzazione persistente — esercitata sulla sola sorgente testo — _✅ `PipelineIngestion` (chunk → embed → indicizza) con callback di progresso (processati/totale) e limite max-chunk (`DocumentoTroppoGrande`). Introdotto il seam puro `Embedder` (id + embedDocumento/embedQuery) così l'orchestrazione è testabile in JVM con un embedder finto; niente stato parziale (tutti gli embedding prima della scrittura, `indicizza` transazionale). 4 test su `SqliteVectorStore` reale via Robolectric: persistenza+riapertura, progresso fino al totale, documento vuoto, oltre-limite senza scritture._
+- [x] 4.3 `PdfSource` con PdfBox-Android; rilevamento del PDF senza layer testo (OCR fuori scope, messaggio chiaro) — _✅ `PdfSource` (PdfBox-Android `PDFTextStripper`); testo estratto vuoto = nessun layer testuale → `PdfSenzaTesto` (OCR fuori scope), input illeggibile → `LetturaFallita`. 3 test Robolectric con PDF generati in-test (testo, pagina vuota, input non-PDF), nessun binario nel repo._
+- [x] 4.4 `UrlSource` con Jsoup + Readability4J; fallback al testo grezzo se Readability fallisce; errori rete chiari senza stato parziale nell'indice — _✅ `EstrazioneHtml` (pura): Readability4J isola l'articolo scartando il boilerplate, se il contenuto è troppo scarno ripiega sul testo grezzo Jsoup con avviso. `UrlSource` con `FetcherHttp` iniettabile (impl OkHttp): URL offline/timeout/HTTP non-2xx/malformato → `ReteNonRaggiungibile`, il fetch precede ogni scrittura (indice invariato). 6 test (3 estrazione HTML su fixture + 3 mapping errori di rete)._
+- [x] 4.5 Unit test dell'estrazione `NormalizedText` per le tre sorgenti (fixture PDF e HTML di esempio) — _✅ coperto insieme a ciascuna sorgente: testo (`TextFileSourceTest`), PDF (`PdfSourceTest`, fixture generate con PdfBox), HTML/URL (`EstrazioneHtmlTest` + `UrlSourceTest`, fixture HTML). Gruppo 4: 27 test nuovi; suite 96/96 verde, `ktlintCheck` e `assembleDebug` ok. Dipendenze nuove: `pdfbox-android:2.0.27.0`, `jsoup:1.18.3`, `readability4j:1.0.8`._
 
 ## 5. Model manager esteso (embedder)
 
