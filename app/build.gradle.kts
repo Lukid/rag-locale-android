@@ -76,6 +76,8 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Robolectric ha bisogno delle risorse/manifest mergiati per girare in JVM.
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -129,6 +131,9 @@ dependencies {
     // --- Test unitari JVM (logica pura: backend, contesto chat, cap, stato modello, storage) ---
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    // Robolectric: SQLite reale in-process per il round-trip del vector store senza device
+    // (la lezione M1 sconsiglia connectedAndroidTest sul Poco — wipe dei dati). Vedi design M2 D3.
+    testImplementation("org.robolectric:robolectric:4.16")
 
     // --- Test strumentati on-device (smoke inferenza reale, vedi InferenceSmokeTest) ---
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

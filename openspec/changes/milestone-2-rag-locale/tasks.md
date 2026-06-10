@@ -16,10 +16,10 @@
 
 ## 3. Vector store e indicizzazione
 
-- [ ] 3.1 `SqliteVectorStore`: schema persistente (documento, chunk, embedding BLOB, metadati incluso l'embedder usato per l'indice)
-- [ ] 3.2 Implementazione della ricerca: embedding della query → scan in memoria + cosine top-K (D3)
-- [ ] 3.3 Coerenza embedder indice/query: rilevare il mismatch e proporre la re-indicizzazione invece di restituire risultati incoerenti
-- [ ] 3.4 Unit test dello store: round-trip di persistenza e ricerca con embedding finti deterministici
+- [x] 3.1 `SqliteVectorStore`: schema persistente (documento, chunk, embedding BLOB, metadati incluso l'embedder usato per l'indice) — _✅ `SqliteVectorStore` (SQLiteOpenHelper): tabella `chunks` (id, documento, indice_chunk, testo, embedding BLOB) + tabella `indice_meta` (embedder_id); serializzazione embedding ↔ BLOB isolata in `EmbeddingBlob` (little-endian fissato, round-trip puro)._
+- [x] 3.2 Implementazione della ricerca: embedding della query → scan in memoria + cosine top-K (D3) — _✅ `cerca()` carica tutti i chunk in memoria e riusa `RankingCosine.topK`; risultati mappati a `ChunkRecuperato` (testo/score/documento/indiceChunk), ordinati per score decrescente._
+- [x] 3.3 Coerenza embedder indice/query: rilevare il mismatch e proporre la re-indicizzazione invece di restituire risultati incoerenti — _✅ `CoerenzaEmbedder.verifica` (puro): `IndiceVuoto`/`Coerente`/`Incoerente`; lo store espone `embedderIndice()` come metadato. Il cablaggio nel flusso di query e la proposta in UI arrivano nel gruppo 6._
+- [x] 3.4 Unit test dello store: round-trip di persistenza e ricerca con embedding finti deterministici — _✅ 14 test TDD: `SqliteVectorStoreTest` su SQLite reale via Robolectric (6: round-trip, ordine+topK, embedderIndice, svuota, indice vuoto, sopravvivenza alla riapertura del DB — no device, no wipe), `EmbeddingBlobTest` (5), `CoerenzaEmbedderTest` (3)._
 
 ## 4. Ingestion (staging per sorgente — D9)
 
