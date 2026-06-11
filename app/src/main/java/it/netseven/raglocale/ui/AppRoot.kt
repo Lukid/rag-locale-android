@@ -2,6 +2,7 @@ package it.netseven.raglocale.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
@@ -20,11 +21,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     CHAT("Chat", Icons.Filled.Chat),
+    DOCS("Documenti", Icons.AutoMirrored.Filled.MenuBook),
     MODELS("Modelli", Icons.Filled.Storage),
     SETTINGS("Impostazioni", Icons.Filled.Settings),
 }
 
-/** Scaffold principale con navigazione a tab tra le tre schermate (task 6.4). */
+/** Scaffold principale con navigazione a tab tra le schermate (chat, documenti, modelli, impostazioni). */
 @Composable
 fun AppRoot() {
     var current by rememberSaveable { mutableStateOf(Tab.CHAT) }
@@ -45,6 +47,7 @@ fun AppRoot() {
         val modifier = Modifier.padding(padding)
         when (current) {
             Tab.CHAT -> ChatScreen(modifier)
+            Tab.DOCS -> IngestionScreen(modifier)
             Tab.MODELS -> ModelManagerScreen(modifier)
             Tab.SETTINGS -> SettingsScreen(modifier)
         }

@@ -29,6 +29,7 @@ class PreferencesRepository
             val ACTIVE_EMBEDDER_ID = stringPreferencesKey("active_embedder_id")
             val MAX_OUTPUT_TOKENS = intPreferencesKey("max_output_tokens")
             val KEEP_ALIVE_MINUTES = intPreferencesKey("keep_alive_minutes")
+            val TOP_K = intPreferencesKey("top_k")
         }
 
         val backend: Flow<Backend> =
@@ -39,6 +40,7 @@ class PreferencesRepository
         val activeEmbedderId: Flow<String?> = context.dataStore.data.map { it[Keys.ACTIVE_EMBEDDER_ID] }
         val maxOutputTokens: Flow<Int> = context.dataStore.data.map { it[Keys.MAX_OUTPUT_TOKENS] ?: DEFAULT_MAX_OUTPUT_TOKENS }
         val keepAliveMinutes: Flow<Int> = context.dataStore.data.map { it[Keys.KEEP_ALIVE_MINUTES] ?: DEFAULT_KEEP_ALIVE_MINUTES }
+        val topK: Flow<Int> = context.dataStore.data.map { it[Keys.TOP_K] ?: DEFAULT_TOP_K }
 
         suspend fun setBackend(value: Backend) {
             context.dataStore.edit { it[Keys.BACKEND] = value.name }
@@ -60,9 +62,16 @@ class PreferencesRepository
             context.dataStore.edit { it[Keys.KEEP_ALIVE_MINUTES] = value }
         }
 
+        suspend fun setTopK(value: Int) {
+            context.dataStore.edit { it[Keys.TOP_K] = value }
+        }
+
         companion object {
             val DEFAULT_BACKEND = Backend.GPU
             const val DEFAULT_MAX_OUTPUT_TOKENS = 200
             const val DEFAULT_KEEP_ALIVE_MINUTES = 5
+
+            /** Numero di chunk recuperati di default (design M2 D5: prefill quasi gratis su GPU). */
+            const val DEFAULT_TOP_K = 5
         }
     }

@@ -30,6 +30,7 @@ fun SettingsScreen(
     val backend by viewModel.backend.collectAsStateWithLifecycle()
     val maxTokens by viewModel.maxOutputTokens.collectAsStateWithLifecycle()
     val keepAlive by viewModel.keepAliveMinutes.collectAsStateWithLifecycle()
+    val topK by viewModel.topK.collectAsStateWithLifecycle()
 
     Column(modifier.fillMaxSize().padding(16.dp)) {
         Text("Impostazioni", style = MaterialTheme.typography.titleLarge)
@@ -77,6 +78,25 @@ fun SettingsScreen(
         )
         Text(
             "Il modello resta caldo in memoria; viene scaricato dopo questo tempo di inattività.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer16()
+        HorizontalDivider()
+        Spacer16()
+
+        Text("Chunk recuperati (RAG): $topK", style = MaterialTheme.typography.titleMedium)
+        Slider(
+            value = topK.toFloat(),
+            onValueChange = { viewModel.setTopK(it.toInt()) },
+            valueRange = 1f..12f,
+            steps = 10,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            "Quanti chunk il retrieval passa al prompt grounded. Il prefill su GPU è quasi gratis: " +
+                "un topK generoso aiuta il richiamo, il limite è la RAM e la lunghezza della risposta.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

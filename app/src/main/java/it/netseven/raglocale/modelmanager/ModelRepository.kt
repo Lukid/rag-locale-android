@@ -14,6 +14,13 @@ import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Coordinate su disco dell'embedder attivo e pronto (modello + tokenizer). */
+data class EmbedderAttivo(
+    val embedderId: String,
+    val modelFile: File,
+    val tokenizerFile: File,
+)
+
 /**
  * Gestione su disco dei modelli (LLM ed embedder): stato, import (staging), selezione
  * dell'attivo per tipo, rimozione.
@@ -118,6 +125,22 @@ class ModelRepository
             val id = activeModelId() ?: ModelCatalog.defaultFor(ModelType.LLM).id
             val model = ModelCatalog.byId(id)?.takeIf { it.type == ModelType.LLM } ?: return null
             return fileFor(model).takeIf { statusFor(model) == ModelStatus.READY }
+        }
+
+        /**
+         * File dell'embedder attivo (modello + tokenizer) se pronto, altrimenti null. L'id
+         * restituito è quello del modello: viene registrato come metadato dell'indice per il
+         * controllo di coerenza ([it.netseven.raglocale.store.CoerenzaEmbedder]).
+         */
+        suspend fun activeEmbedderFiles(): EmbedderAttivo? {
+            val model = ModelCatalog.byId(activeEmbedderId())?.takeIf { it.type == ModelType.EMBEDDER } ?: return null
+            if (statusFor(model) != ModelStatus.READY) return null
+            val companion = model.companion ?: return null
+            return EmbedderAttivo(
+                embedderId = model.id,
+                modelFile = fileFor(model),
+                tokenizerFile = fileFor(companion.fileName),
+            )
         }
 
         /**

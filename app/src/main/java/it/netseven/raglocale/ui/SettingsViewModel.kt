@@ -34,9 +34,18 @@ class SettingsViewModel
                 PreferencesRepository.DEFAULT_KEEP_ALIVE_MINUTES,
             )
 
+        val topK: StateFlow<Int> =
+            prefs.topK.stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                PreferencesRepository.DEFAULT_TOP_K,
+            )
+
         fun setBackend(value: Backend) = viewModelScope.launch { prefs.setBackend(value) }.let { }
 
         fun setMaxOutputTokens(value: Int) = viewModelScope.launch { prefs.setMaxOutputTokens(value) }.let { }
 
         fun setKeepAliveMinutes(value: Int) = viewModelScope.launch { prefs.setKeepAliveMinutes(value) }.let { }
+
+        fun setTopK(value: Int) = viewModelScope.launch { prefs.setTopK(value) }.let { }
     }

@@ -5,8 +5,11 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import androidx.core.database.getStringOrNull
+import dagger.hilt.android.qualifiers.ApplicationContext
 import it.netseven.raglocale.retrieval.ChunkRecuperato
 import it.netseven.raglocale.retrieval.RankingCosine
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Vector store persistente su SQLite (design M2 D3). I chunk e i loro embedding (BLOB)
@@ -18,8 +21,9 @@ import it.netseven.raglocale.retrieval.RankingCosine
  * di coerenza indice/query ([CoerenzaEmbedder]) per non restituire risultati incoerenti
  * quando l'embedder attivo cambia.
  */
-class SqliteVectorStore(
-    context: Context,
+@Singleton
+class SqliteVectorStore @Inject constructor(
+    @ApplicationContext context: Context,
 ) : SQLiteOpenHelper(context, NOME_DB, null, VERSIONE_DB), VectorStore {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
