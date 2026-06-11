@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Riga del Model manager: modello + stato + se attivo + esito del check storage. */
+/** Riga del Model manager: modello + stato + se attivo (per il suo tipo) + esito del check storage. */
 data class ModelRow(
     val model: ModelInfo,
     val status: ModelStatus,
@@ -36,13 +36,15 @@ class ModelManagerViewModel
 
         fun refresh() {
             viewModelScope.launch {
-                val activeId = repository.activeModelId() ?: ModelCatalog.default.id
+                val activeLlmId = repository.activeModelId() ?: ModelCatalog.defaultFor(ModelType.LLM).id
+                val activeEmbedderId = repository.activeEmbedderId()
                 _rows.value =
                     ModelCatalog.models.map { model ->
+                        val activeIdForType = if (model.type == ModelType.LLM) activeLlmId else activeEmbedderId
                         ModelRow(
                             model = model,
                             status = repository.statusFor(model),
-                            isActive = model.id == activeId,
+                            isActive = model.id == activeIdForType,
                             storage = repository.storageCheck(model),
                         )
                     }
@@ -51,12 +53,12 @@ class ModelManagerViewModel
 
         fun import(
             uri: Uri,
-            model: ModelInfo,
+            target: ImportTarget,
         ) {
             viewModelScope.launch {
-                repository.importFromUri(uri, model)
-                    .onSuccess { _message.value = "Modello importato: ${model.displayName}" }
-                    .onFailure { _message.value = "Import fallito: ${it.message}" }
+                repository.importFromUri(uri, target)
+                    .onSuccess { _message.value = "Importato: ${target.fileName}" }
+                    .onFailure { _message.value = "Import fallito (${target.etichetta}): ${it.message}" }
                 refresh()
             }
         }

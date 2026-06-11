@@ -31,10 +31,10 @@
 
 ## 5. Model manager esteso (embedder)
 
-- [ ] 5.1 Tipo di modello nel catalogo (LLM | embedder): EmbeddingGemma default embedder, Gecko come alternativa, metadati e stato per tipo
-- [ ] 5.2 Selezione dell'embedder attivo (persistita) e rimozione, in analogia col LLM attivo
-- [ ] 5.3 Generalizzare l'import da file (`.part` + move atomico + checksum, scarto su mismatch) a entrambi i tipi di modello
-- [ ] 5.4 Unit test: macchina a stati per tipo, import con checksum non corrispondente
+- [x] 5.1 Tipo di modello nel catalogo (LLM | embedder): EmbeddingGemma default embedder, Gecko come alternativa, metadati e stato per tipo — _✅ `ModelType {LLM, EMBEDDER}` su `ModelInfo`; `ModelCatalog.defaultFor(type)`/`forType(type)`. Default: Gemma 4 E2B-it (LLM), EmbeddingGemma 300M seq512 (embedder, con `expectedMd5` + `CompanionArtifact` tokenizer), Gecko come riserva non-default (coordinate non verificate). `ModelManagerScreen` raggruppa ed etichetta per tipo. 8 test `ModelCatalogTest`._
+- [x] 5.2 Selezione dell'embedder attivo (persistita) e rimozione, in analogia col LLM attivo — _✅ `PreferencesRepository.activeEmbedderId` (chiave DataStore dedicata); `ModelRepository.setActive` instrada per tipo (LLM→activeModelId, embedder→activeEmbedderId), `activeModelFile()` resta type-safe sul LLM. `remove` cancella tutti i file del modello. UI: radiobutton attivo per tipo. Coperto da `ModelRepositoryTest` (Robolectric, selezione e rimozione)._
+- [x] 5.3 Generalizzare l'import da file (`.part` + move atomico + checksum, scarto su mismatch) a entrambi i tipi di modello — _✅ `importFromUri(uri, ImportTarget)` per ogni file (principale o companion): staging `.part` → `ImportVerifier` (checksum md5 quando noto, altrimenti dimensione) → move atomico; scarto su mismatch cancella il `.part`. `FileChecksum.md5` in streaming. L'embedder importa due file (modello + tokenizer)._
+- [x] 5.4 Unit test: macchina a stati per tipo, import con checksum non corrispondente — _✅ `ModelStatusResolver.resolveModel` (embedder pronto solo con modello+tokenizer entrambi plausibili) con 4 test; `ImportVerifier` puro con 7 test (incluso "stessa dimensione, md5 diverso → scarto", lezione M1); `ModelRepositoryTest` Robolectric (import ok a due file, checksum errato scartato senza lasciare il file, rimozione di entrambi). Suite 115/115 verde, `ktlintCheck` e `assembleDebug` ok._
 
 ## 6. Generazione grounded e UI didattica
 

@@ -73,4 +73,85 @@ class ModelStatusResolverTest {
             ),
         )
     }
+
+    // --- Macchina a stati per tipo (task 5.4): l'embedder è pronto solo con modello + companion ---
+
+    private val llm =
+        ModelInfo(
+            id = "llm",
+            displayName = "LLM",
+            type = ModelType.LLM,
+            repo = "",
+            fileName = "x.litertlm",
+            sizeBytes = 1_000,
+            quantization = "int4",
+        )
+
+    private val embedder =
+        ModelInfo(
+            id = "emb",
+            displayName = "Embedder",
+            type = ModelType.EMBEDDER,
+            repo = "",
+            fileName = "x.tflite",
+            sizeBytes = 1_000,
+            quantization = "int4",
+            companion = CompanionArtifact(fileName = "tok.model", sizeBytes = 100),
+        )
+
+    @Test
+    fun `LLM senza companion e' pronto col solo file modello`() {
+        assertEquals(
+            ModelStatus.READY,
+            ModelStatusResolver.resolveModel(
+                model = llm,
+                primaryExists = true,
+                primarySizeBytes = 1_000,
+                companionExists = false,
+                companionSizeBytes = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun `embedder e' pronto solo con modello e companion entrambi presenti`() {
+        assertEquals(
+            ModelStatus.READY,
+            ModelStatusResolver.resolveModel(
+                model = embedder,
+                primaryExists = true,
+                primarySizeBytes = 1_000,
+                companionExists = true,
+                companionSizeBytes = 100,
+            ),
+        )
+    }
+
+    @Test
+    fun `embedder col solo modello e senza tokenizer non e' pronto`() {
+        assertEquals(
+            ModelStatus.NOT_DOWNLOADED,
+            ModelStatusResolver.resolveModel(
+                model = embedder,
+                primaryExists = true,
+                primarySizeBytes = 1_000,
+                companionExists = false,
+                companionSizeBytes = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun `embedder col solo tokenizer e senza modello non e' pronto`() {
+        assertEquals(
+            ModelStatus.NOT_DOWNLOADED,
+            ModelStatusResolver.resolveModel(
+                model = embedder,
+                primaryExists = false,
+                primarySizeBytes = 0,
+                companionExists = true,
+                companionSizeBytes = 100,
+            ),
+        )
+    }
 }

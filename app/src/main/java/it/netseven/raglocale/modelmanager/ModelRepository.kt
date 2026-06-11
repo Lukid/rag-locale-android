@@ -15,11 +15,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Gestione su disco dei modelli: stato, import (staging M1), selezione attivo, rimozione.
+ * Gestione su disco dei modelli (LLM ed embedder): stato, import (staging), selezione
+ * dell'attivo per tipo, rimozione.
  *
- * **Staging (design D8 / memory reference-anti-vocale):** M1 parte dalla **selezione/import
- * di un `.litertlm` già presente sul device** (file picker / `adb push`). Il download da
- * Hugging Face con progresso+ripresa e l'eventuale OAuth/token sono la rifinitura successiva.
+ * **Staging (design D8):** acquisizione via import di file già presenti sul device
+ * (file picker / `adb push`). L'import avviene su file temporaneo `.part`, verifica
+ * l'integrità (checksum md5 quando noto — lezione M1: la sola dimensione non basta) e poi
+ * sposta atomicamente. Un embedder ha due file (modello + tokenizer): vanno importati
+ * entrambi perché risulti pronto.
  */
 @Singleton
 class ModelRepository
@@ -30,85 +33,98 @@ class ModelRepository
     ) {
         private val modelsDir: File = File(context.filesDir, "models").apply { mkdirs() }
 
-        fun fileFor(model: ModelInfo): File = File(modelsDir, model.fileName)
+        private fun fileFor(fileName: String): File = File(modelsDir, fileName)
 
+        /** File principale del modello. */
+        fun fileFor(model: ModelInfo): File = fileFor(model.fileName)
+
+        /** Stato complessivo del modello: per l'embedder considera anche il tokenizer companion. */
         fun statusFor(model: ModelInfo): ModelStatus {
-            val file = fileFor(model)
-            return ModelStatusResolver.resolve(
-                fileExists = file.exists(),
-                fileSizeBytes = if (file.exists()) file.length() else 0L,
+            val primary = fileFor(model.fileName)
+            val companion = model.companion?.let { fileFor(it.fileName) }
+            return ModelStatusResolver.resolveModel(
+                model = model,
+                primaryExists = primary.exists(),
+                primarySizeBytes = if (primary.exists()) primary.length() else 0L,
+                companionExists = companion?.exists() ?: false,
+                companionSizeBytes = if (companion?.exists() == true) companion.length() else 0L,
                 downloadInProgress = false,
-                expectedSizeBytes = model.sizeBytes,
             )
         }
 
         /** Spazio libero (byte) sulla partizione dello storage interno dell'app. */
         fun freeSpaceBytes(): Long = modelsDir.usableSpace
 
-        fun storageCheck(model: ModelInfo): StorageChecker.Result = StorageChecker.check(freeSpaceBytes(), model.sizeBytes)
+        fun storageCheck(model: ModelInfo): StorageChecker.Result {
+            val totale = model.sizeBytes + (model.companion?.sizeBytes ?: 0L)
+            return StorageChecker.check(freeSpaceBytes(), totale)
+        }
 
-        /** Importa un `.litertlm` selezionato dall'utente, copiandolo nello storage interno. */
+        /**
+         * Importa un singolo file del modello (principale o companion) descritto da [target],
+         * copiandolo nello storage interno con staging `.part`, verifica del checksum e move atomico.
+         */
         suspend fun importFromUri(
             uri: Uri,
-            model: ModelInfo,
+            target: ImportTarget,
         ): Result<File> =
             withContext(Dispatchers.IO) {
+                val part = fileFor("${target.fileName}.part")
                 runCatching {
-                    require(model.fileName.endsWith(".litertlm", ignoreCase = true)) {
-                        "Il modello atteso deve essere un file .litertlm"
-                    }
-                    val dest = fileFor(model)
-                    val part = File(modelsDir, "${model.fileName}.part")
                     part.delete()
                     context.contentResolver.openInputStream(uri).use { input ->
                         requireNotNull(input) { "Impossibile aprire il file selezionato" }
                         part.outputStream().use { output -> input.copyTo(output) }
                     }
-                    require(isReadyFile(part, model)) {
-                        "File modello incompleto o non coerente con ${model.displayName}"
-                    }
+                    val esito =
+                        ImportVerifier.verifica(
+                            fileSizeBytes = part.length(),
+                            expectedSizeBytes = target.sizeBytes,
+                            computedMd5 = if (target.expectedMd5 != null) FileChecksum.md5(part) else null,
+                            expectedMd5 = target.expectedMd5,
+                        )
+                    if (esito is ImportVerifier.Esito.Rifiutato) error(esito.motivo)
+                    val dest = fileFor(target.fileName)
                     moveIntoPlace(part, dest)
                     dest
-                }.onFailure {
-                    File(modelsDir, "${model.fileName}.part").delete()
-                }
+                }.onFailure { part.delete() }
             }
 
+        /** Rimuove tutti i file del modello (principale + companion) e gli eventuali `.part`. */
         fun remove(model: ModelInfo): Boolean {
-            val file = fileFor(model)
-            File(modelsDir, "${model.fileName}.part").delete()
-            return file.exists() && file.delete()
+            var rimosso = false
+            for (target in model.targets()) {
+                fileFor("${target.fileName}.part").delete()
+                val file = fileFor(target.fileName)
+                if (file.exists() && file.delete()) rimosso = true
+            }
+            return rimosso
         }
 
-        suspend fun setActive(model: ModelInfo) = prefs.setActiveModelId(model.id)
+        /** Imposta il modello attivo per il suo tipo (LLM per la chat, embedder per il RAG). */
+        suspend fun setActive(model: ModelInfo) =
+            when (model.type) {
+                ModelType.LLM -> prefs.setActiveModelId(model.id)
+                ModelType.EMBEDDER -> prefs.setActiveEmbedderId(model.id)
+            }
 
         suspend fun activeModelId(): String? = prefs.activeModelId.first()
 
-        /** File del modello attivo se pronto, altrimenti null. */
+        suspend fun activeEmbedderId(): String =
+            prefs.activeEmbedderId.first() ?: ModelCatalog.defaultFor(ModelType.EMBEDDER).id
+
+        /** File del LLM attivo se pronto, altrimenti null. */
         suspend fun activeModelFile(): File? {
-            val id = activeModelId() ?: ModelCatalog.default.id
-            val model = ModelCatalog.byId(id) ?: return null
-            val file = fileFor(model)
-            return if (isReadyFile(file, model)) file else null
+            val id = activeModelId() ?: ModelCatalog.defaultFor(ModelType.LLM).id
+            val model = ModelCatalog.byId(id)?.takeIf { it.type == ModelType.LLM } ?: return null
+            return fileFor(model).takeIf { statusFor(model) == ModelStatus.READY }
         }
 
         /**
-         * Download in-app (task 5.2/5.5): **rinviato** per scelta di staging.
-         * L'M1 usa l'import da file (sopra); il download HF con progresso/ripresa e
-         * l'OAuth/token sono la rifinitura successiva (vedi tasks.md §5 e design D8).
+         * Download in-app: **rinviato** per scelta di staging (vedi tasks.md §5 e design D8).
+         * L'acquisizione avviene via import da file (sopra).
          */
         fun isInAppDownloadSupported(): Boolean = false
-
-        private fun isReadyFile(
-            file: File,
-            model: ModelInfo,
-        ): Boolean =
-            ModelStatusResolver.resolve(
-                fileExists = file.exists(),
-                fileSizeBytes = if (file.exists()) file.length() else 0L,
-                downloadInProgress = false,
-                expectedSizeBytes = model.sizeBytes,
-            ) == ModelStatus.READY
 
         private fun moveIntoPlace(
             source: File,

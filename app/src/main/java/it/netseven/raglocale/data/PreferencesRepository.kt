@@ -26,6 +26,7 @@ class PreferencesRepository
         private object Keys {
             val BACKEND = stringPreferencesKey("backend")
             val ACTIVE_MODEL_ID = stringPreferencesKey("active_model_id")
+            val ACTIVE_EMBEDDER_ID = stringPreferencesKey("active_embedder_id")
             val MAX_OUTPUT_TOKENS = intPreferencesKey("max_output_tokens")
             val KEEP_ALIVE_MINUTES = intPreferencesKey("keep_alive_minutes")
         }
@@ -35,6 +36,7 @@ class PreferencesRepository
                 prefs[Keys.BACKEND]?.let { runCatching { Backend.valueOf(it) }.getOrNull() } ?: DEFAULT_BACKEND
             }
         val activeModelId: Flow<String?> = context.dataStore.data.map { it[Keys.ACTIVE_MODEL_ID] }
+        val activeEmbedderId: Flow<String?> = context.dataStore.data.map { it[Keys.ACTIVE_EMBEDDER_ID] }
         val maxOutputTokens: Flow<Int> = context.dataStore.data.map { it[Keys.MAX_OUTPUT_TOKENS] ?: DEFAULT_MAX_OUTPUT_TOKENS }
         val keepAliveMinutes: Flow<Int> = context.dataStore.data.map { it[Keys.KEEP_ALIVE_MINUTES] ?: DEFAULT_KEEP_ALIVE_MINUTES }
 
@@ -44,6 +46,10 @@ class PreferencesRepository
 
         suspend fun setActiveModelId(id: String) {
             context.dataStore.edit { it[Keys.ACTIVE_MODEL_ID] = id }
+        }
+
+        suspend fun setActiveEmbedderId(id: String) {
+            context.dataStore.edit { it[Keys.ACTIVE_EMBEDDER_ID] = id }
         }
 
         suspend fun setMaxOutputTokens(value: Int) {
