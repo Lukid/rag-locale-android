@@ -2,6 +2,7 @@ package it.netseven.raglocale.modelmanager
 
 import android.net.Uri
 import it.netseven.raglocale.data.PreferencesRepository
+import it.netseven.raglocale.modelmanager.download.FakeModelDownloader
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -51,7 +52,8 @@ class ModelRepositoryTest {
 
     @Before
     fun setUp() {
-        repository = ModelRepository(context, PreferencesRepository(context))
+        // Questi test esercitano import/selezione/rimozione: il downloader non viene invocato.
+        repository = ModelRepository(context, PreferencesRepository(context), FakeModelDownloader())
     }
 
     @After

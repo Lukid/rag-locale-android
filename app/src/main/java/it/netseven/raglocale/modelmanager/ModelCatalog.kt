@@ -7,6 +7,12 @@ package it.netseven.raglocale.modelmanager
  * la verifica d'integrità all'import.
  */
 object ModelCatalog {
+    /** URL di download diretto di un file da un repo HuggingFace (branch main). */
+    private fun hfUrl(
+        repo: String,
+        fileName: String,
+    ): String = "https://huggingface.co/$repo/resolve/main/$fileName"
+
     val GEMMA_4_E2B =
         ModelInfo(
             id = "gemma-4-e2b-it",
@@ -14,11 +20,14 @@ object ModelCatalog {
             type = ModelType.LLM,
             repo = "litert-community/gemma-4-E2B-it-litert-lm",
             fileName = "gemma-4-E2B-it.litertlm",
-            // Stima: il file reale va misurato sul device. Nessun md5 canonico committato
-            // (l'utente importa il proprio .litertlm) → l'import ricade sul controllo dimensione.
-            sizeBytes = 3_100_000_000L,
+            // Dimensione e md5 canonici verificati su HF il 2026-06-13 (Content-Length reale,
+            // non più la stima a 3,1 GB). Il file è pubblico (non gated): download anonimo.
+            sizeBytes = 2_588_147_712L,
             quantization = "int4",
             isDefault = true,
+            expectedMd5 = "1b8446203a216cfd31f6a2a22f75e5e5",
+            downloadUrl = hfUrl("litert-community/gemma-4-E2B-it-litert-lm", "gemma-4-E2B-it.litertlm"),
+            gated = false,
         )
 
     /**
@@ -36,12 +45,18 @@ object ModelCatalog {
             sizeBytes = 196_000_000L,
             quantization = "mixed-precision (int4/int8)",
             isDefault = true,
+            // gated:auto su HF (verificato 2026-06-13): il download richiede il token dell'utente
+            // loggato. La strategia public-first lo rileva via HEAD; `gated` qui è solo hint UI.
             expectedMd5 = "edd86dab69e9333794ed983b4ab6d0d3",
+            downloadUrl =
+                hfUrl("litert-community/embeddinggemma-300m", "embeddinggemma-300M_seq512_mixed-precision.tflite"),
+            gated = true,
             companion =
                 CompanionArtifact(
                     fileName = "sentencepiece.model",
                     sizeBytes = 4_680_000L,
                     expectedMd5 = "b0cab25d6777ffdf26856aaf6316fbbc",
+                    downloadUrl = hfUrl("litert-community/embeddinggemma-300m", "sentencepiece.model"),
                 ),
         )
 

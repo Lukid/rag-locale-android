@@ -72,7 +72,9 @@ Confine chiave: **ogni sorgente produce `NormalizedText`**; da lì la pipeline �
 ## Sicurezza e comandi sicuri
 
 - **Nessun segreto nel repo.** Chiavi di firma, keystore e credenziali stanno in `local.properties`
-  o nei secret di CI — mai committati. Vedi `.gitignore` e `.env.example`.
+  o nei secret di CI — mai committati. Vedi `.gitignore` e `.env.example`. Per il login HuggingFace
+  in-app (download dei modelli gated) serve un Client ID OAuth in `local.properties`
+  (`hfOauthClientId`): istruzioni in [`docs/oauth-huggingface-setup.md`](docs/oauth-huggingface-setup.md).
 - Il dato dell'utente (documenti ingeriti, modelli scaricati) resta on-device per design: non
   introdurre chiamate di rete verso servizi di inferenza. L'unica rete prevista è `UrlSource`
   (fetch di una pagina su richiesta dell'utente) e il download dei modelli dal Model manager.

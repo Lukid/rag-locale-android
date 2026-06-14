@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,6 +8,15 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("org.jlleitschuh.gradle.ktlint")
 }
+
+// Client ID dell'OAuth app HuggingFace, letto da local.properties (non committato — vedi
+// .env.example e README). Se assente, resta vuoto: il login HF degrada con grazia e i modelli
+// pubblici (es. l'LLM) restano scaricabili lo stesso (design download-modelli-in-app, D5).
+val hfOauthClientId: String =
+    Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }.getProperty("hfOauthClientId", "")
 
 android {
     namespace = "it.netseven.raglocale"
@@ -19,6 +30,11 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Download in-app: Client ID OAuth HF (vuoto = login non configurato, vedi sopra) e
+        // schema di redirect per AppAuth (deve combaciare con HuggingFaceOAuthConfig.REDIRECT_URI).
+        buildConfigField("String", "HF_OAUTH_CLIENT_ID", "\"$hfOauthClientId\"")
+        manifestPlaceholders["appAuthRedirectScheme"] = "it.netseven.raglocale"
     }
 
     buildTypes {
@@ -118,6 +134,12 @@ dependencies {
 
     // --- Rete (download modelli — usato a partire dalla rifinitura download in-app) ---
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // --- Download in-app: OAuth HuggingFace ---
+    // AppAuth: OAuth 2.0 Authorization Code + PKCE via Custom Tabs (porting da anti-vocale).
+    implementation("net.openid:appauth:0.11.1")
+    // EncryptedSharedPreferences: persistenza cifrata dei token HF (access/refresh/scadenza).
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // --- Ingestion documenti (sorgenti PDF e URL — design M2 D9) ---
     // PdfBox-Android: estrazione del layer testo dei PDF. Niente OCR (fuori scope): un PDF

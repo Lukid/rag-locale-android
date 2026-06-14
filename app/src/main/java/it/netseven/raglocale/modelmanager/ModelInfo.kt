@@ -14,14 +14,18 @@ data class CompanionArtifact(
     val fileName: String,
     val sizeBytes: Long,
     val expectedMd5: String? = null,
+    /** URL di download diretto del file accessorio; null se non scaricabile in-app (solo import). */
+    val downloadUrl: String? = null,
 )
 
-/** File importabile di un modello (principale o companion), con l'etichetta per la UI. */
+/** File acquisibile di un modello (principale o companion), con l'etichetta per la UI. */
 data class ImportTarget(
     val fileName: String,
     val sizeBytes: Long,
     val expectedMd5: String?,
     val etichetta: String,
+    /** URL di download diretto del file; null se acquisibile solo via import. */
+    val downloadUrl: String? = null,
 )
 
 /** Metadati di un modello del catalogo (LLM o embedder). */
@@ -38,12 +42,25 @@ data class ModelInfo(
     val expectedMd5: String? = null,
     /** File accessorio richiesto (es. tokenizer dell'embedder); null per i modelli a file singolo. */
     val companion: CompanionArtifact? = null,
+    /** URL di download diretto del file principale; null se non scaricabile in-app (solo import). */
+    val downloadUrl: String? = null,
+    /**
+     * Accesso ristretto su HuggingFace (gated): hint per la UI (badge "richiede login HF"). La
+     * decisione reale di autenticazione resta "public-first" a runtime (HEAD), non questo flag.
+     */
+    val gated: Boolean = false,
 ) {
-    /** I file da importare per rendere il modello pronto: il principale e l'eventuale companion. */
+    /** True se il modello (file principale e relativo companion) è scaricabile in-app. */
+    val scaricabile: Boolean
+        get() = downloadUrl != null && (companion == null || companion.downloadUrl != null)
+
+    /** I file da acquisire per rendere il modello pronto: il principale e l'eventuale companion. */
     fun targets(): List<ImportTarget> =
         buildList {
-            add(ImportTarget(fileName, sizeBytes, expectedMd5, etichetta = "modello"))
-            companion?.let { add(ImportTarget(it.fileName, it.sizeBytes, it.expectedMd5, etichetta = "tokenizer")) }
+            add(ImportTarget(fileName, sizeBytes, expectedMd5, etichetta = "modello", downloadUrl = downloadUrl))
+            companion?.let {
+                add(ImportTarget(it.fileName, it.sizeBytes, it.expectedMd5, etichetta = "tokenizer", downloadUrl = it.downloadUrl))
+            }
         }
 }
 
