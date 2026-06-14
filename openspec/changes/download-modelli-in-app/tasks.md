@@ -62,10 +62,10 @@
 > ⏳ Da eseguire sul device. Prerequisiti: APK installato sul Poco e — per 8.2 — l'OAuth app HF
 > registrata con `hfOauthClientId` in `local.properties` (vedi `docs/oauth-huggingface-setup.md`).
 
-- [ ] 8.1 Download anonimo dell'LLM end-to-end con verifica md5 e progresso reale
-- [ ] 8.2 Login HF + download dell'embedder gated (incluso il caso "accetta licenza una volta" comunicato in chiaro)
+- [x] 8.1 Download anonimo dell'LLM end-to-end con verifica md5 e progresso reale — _✅ validato sul Poco (Android 16, adb wifi): download anonimo (nessun token) dell'LLM, `.part` cresciuto fino a 2 588 147 712 byte a ~3,2 MB/s costanti, sidecar `.size` = size canonica del catalogo, rename atomico `.part`→finale dopo la verifica; md5 finale `1b8446203a216cfd31f6a2a22f75e5e5` = atteso. **Osservazione**: l'`Elimina` del modello rimuove il file ma lascia orfani i file di cache GPU del vecchio modello (`*.xnnpack_cache_*` ~788 MB, `*_mldrift_*`) — lacuna di cleanup, innocua ma da valutare._
+- [ ] 8.2 Login HF + download dell'embedder gated (incluso il caso "accetta licenza una volta" comunicato in chiaro) — _⏭️ rinviato (2026-06-14): in validazione on-device si è scelto di coprire solo il path pubblico. Il gated richiede di registrare l'OAuth app HF e mettere `hfOauthClientId` in `local.properties` (oggi assente); da fare quando ci sarà l'OAuth di produzione. Nota: l'embedder è comunque già presente sul device da un import precedente, quindi per testarne davvero il download in-app andrà prima eliminato._
 - [ ] 8.3 Ripresa dopo uscita dall'app (dal `.tmp`) e annullamento
-- [ ] 8.4 Attivazione (`Usa`) del modello scaricato e prova in chat (parafrasi end-to-end)
+- [x] 8.4 Attivazione (`Usa`) del modello scaricato e prova in chat (parafrasi end-to-end) — _✅ validato sul Poco con una vera **parafrasi grounded**: domanda "cosa fa il felino il pomeriggio?" sul chunk del "gatto soriano" → retrieval + risposta grounded riformulata, generata dal modello appena scaricato. Logcat: il motore si carica on-demand sul nuovo file (`Init LiteRT-LM … backend=GPU` 12:12:44 → `Engine inizializzato su GPU` 12:12:48, stesso processo). Prima risposta lenta (~4,6 s di init + ricostruzione cache GPU al primo caricamento del file fresco). **Niente bottone `Usa`**: lo stato "attivo" è derivato dal filesystem (nessun prefs/datastore che lo persista) e con un solo LLM in catalogo il modello presente+verificato è automaticamente quello attivo. Bonus: keep-alive con auto-unload dopo inattività (11:59) → l'`Elimina` del vecchio è avvenuto senza lock sul file._
 
 ## 9. Documentazione e chiusura
 
